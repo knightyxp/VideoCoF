@@ -3,7 +3,7 @@
   <h1 style="margin: 0; font-size: 1.8em;">
     Unified Video Editing with Temporal Reasoner
   </h1>
-
+  ## [<a href="https://videocof.github.io" target="_blank">Project Page</a>]
   <h4 style="margin: 15px 0; color: #2c3e50;">
     👁️ See &rarr; 🧠 Reason &rarr; ✏️ Edit
   </h4>
