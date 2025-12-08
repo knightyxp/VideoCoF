@@ -92,14 +92,30 @@ https://github.com/user-attachments/assets/0e3eafae-3a62-4cd8-bf4a-37d9b280d05d
 
 3.  **Download Models:**
 
-    *   **Wan 2.1-14B Pretrained Weights:**
+    *   **Wan-2.1-T2V-14B Pretrained Weights:**
+        
+        Using `git lfs`:
         ```bash
+        git lfs install
         git clone https://huggingface.co/Wan-AI/Wan2.1-T2V-14B
         ```
 
-    *   **VideoCoF Checkpoint:**
+        Or using `huggingface-cli`:
         ```bash
+        hf download Wan-AI/Wan2.1-T2V-14B --local-dir Wan2.1-T2V-14B
+        ```
+
+    *   **VideoCoF Checkpoint:**
+        
+        Using `git lfs`:
+        ```bash
+        gif lfs install
         git clone https://huggingface.co/XiangpengYang/VideoCoF videocof_weight
+        ```
+
+        Or using `huggingface-cli`:
+        ```bash
+        hf download XiangpengYang/VideoCoF --local-dir videocof_weight
         ```
 
 4.  **Inference:**
@@ -107,7 +123,7 @@ https://github.com/user-attachments/assets/0e3eafae-3a62-4cd8-bf4a-37d9b280d05d
     For single inference tasks:
 
     ```bash
-    # Object Removal
+    # Multi-Instance Object Removal
     sh scripts/obj_rem.sh
 
     # Object Addition
