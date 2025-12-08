@@ -17,6 +17,7 @@
   [![Project Page](https://img.shields.io/badge/Project-Page-green)](https://videocof.github.io)
   [![Hugging Face Model](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-yellow)](https://huggingface.co/XiangpengYang/VideoCoF)
   [![Hugging Face Data](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Data-yellow)](https://huggingface.co/datasets)
+  ![visitors](https://visitor-badge.laobi.icu/badge?page_id=videocof.VideoCoF&left_color=green&right_color=red)
 
 </div>
 
@@ -32,6 +33,16 @@
   <br>
   <span style="font-size: 1em; color: #555;"><sup>1</sup>University of Technology Sydney, <sup>2</sup>Zhejiang University</span>
 </div>
+
+## 🔗 **Links & Resources**
+
+**[**[**📄 Paper**](https://arxiv.org/abs/2400.00000)**]**
+
+**[**[**🌐 Project Page**](https://videocof.github.io)**]**
+
+**[**[**📦 Model Weights**](https://huggingface.co/XiangpengYang/VideoCoF)**]**
+
+**[**[**📊 Dataset**](https://huggingface.co/datasets)**]**
 
 <br>
 
@@ -92,7 +103,7 @@ https://github.com/user-attachments/assets/0e3eafae-3a62-4cd8-bf4a-37d9b280d05d
 
 3.  **Download Models:**
 
-    *   **Wan-2.1-T2V-14B Pretrained Weights:**
+    **Wan-2.1-T2V-14B Pretrained Weights:**
         
         ```bash
         git lfs install
@@ -102,7 +113,7 @@ https://github.com/user-attachments/assets/0e3eafae-3a62-4cd8-bf4a-37d9b280d05d
         # hf download Wan-AI/Wan2.1-T2V-14B --local-dir Wan2.1-T2V-14B
         ```
 
-    *   **VideoCoF Checkpoint:**
+    **VideoCoF Checkpoint:**
         
         ```bash
         git lfs install
@@ -203,3 +214,8 @@ If you find this work useful for your research, please consider citing:
 <div align="center">
   ⭐ **If you find this project helpful, please consider giving it a star!** ⭐
 </div>
+
+## ⭐️ Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=videocof/VideoCoF&type=Date)](https://star-history.com/#videocof/VideoCoF&Date)
+
