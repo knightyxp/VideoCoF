@@ -90,9 +90,38 @@ https://github.com/user-attachments/assets/0e3eafae-3a62-4cd8-bf4a-37d9b280d05d
     If you are using these GPUs, please follow the [official FlashAttention-3 installation guide](https://github.com/Dao-AILab/flash-attention?tab=readme-ov-file#flashattention-3-beta-release) after installing the compatible PyTorch version (e.g., PyTorch 2.8 + CUDA 12.8).
 
 
-3.  **Inference:**
-    
-    *(Instructions coming soon...)*
+3.  **Download Models:**
+
+    *   **Wan 2.1-14B Pretrained Weights:**
+        ```bash
+        git clone https://huggingface.co/Wan-AI/Wan2.1-T2V-14B
+        ```
+
+    *   **VideoCoF Checkpoint:**
+        ```bash
+        git clone https://huggingface.co/XiangpengYang/VideoCoF videocof_weight
+        ```
+
+4.  **Inference:**
+
+    For single inference tasks:
+
+    ```bash
+    # Object Removal
+    sh scripts/obj_rem.sh
+
+    # Object Addition
+    sh scripts/obj_add.sh
+
+    # Local Style Transfer
+    sh scripts/local_style.sh
+    ```
+
+    For parallel inference:
+
+    ```bash
+    sh scripts/parallel_infer.sh
+    ```
 
 ## 🏆 Model Zoo
 
