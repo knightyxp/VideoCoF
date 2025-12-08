@@ -4,6 +4,7 @@
 build/
 develop-eggs/
 downloads/
+results/
 eggs/
 .eggs/
 lib/

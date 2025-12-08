@@ -3,7 +3,7 @@
         "task_type": "obj_add",
         "sample_id": "001",
         "source_video_path": "assets/woman_ballon.mp4",
-        "qwen_vl_72b_refined_instruction": "Swap the normal human arm at the blue armrest with a prosthetic arm."
+        "qwen_vl_72b_refined_instruction": "Add the woman in a floral dress pointing at the balloon on the left."
       },
       {
         "task_type": "obj_rem",
