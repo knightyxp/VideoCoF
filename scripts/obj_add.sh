@@ -10,4 +10,4 @@ torchrun --nproc_per_node=1 inference.py \
   --source_frames 33 \
   --reasoning_frames 4 \
   --repeat_rope \
-  --lora_path videocof_weight/videocof.safetensors
+  --videocof_path videocof_weight/videocof.safetensors
