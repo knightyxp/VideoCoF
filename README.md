@@ -100,7 +100,7 @@ Our models are available on Hugging Face:
 
 | Model Name | Description | Link |
 |------------|-------------|------|
-| VideoCoF-Base | Base model trained on 50k video pairs | [Hugging Face](https://huggingface.co/XiangpengYang/VideoCoF) |
+| VideoCoF-Base | Base model trained on 50k video pairs | [Hugging Face]() |
 
 ## 🍭 Results
 
