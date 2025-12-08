@@ -34,10 +34,6 @@
   <span style="font-size: 1em; color: #555;"><sup>1</sup>University of Technology Sydney, <sup>2</sup>Zhejiang University</span>
 </div>
 
-## 🔗 **Links & Resources**
-
-**[**[**📄 Paper**](https://arxiv.org/abs/2400.00000)**]** **[**[**🌐 Project Page**](https://videocof.github.io)**]** **[**[**📦 Model Weights**](https://huggingface.co/XiangpengYang/VideoCoF)**]** **[**[**📊 Dataset**](https://huggingface.co/datasets)**]**
-
 <br>
 
 ## 💿 Introduction
