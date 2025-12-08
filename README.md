@@ -12,11 +12,10 @@
     🚀 A Chain of Frames video editing method enbale temporal reasoning and 4x video length extrapolation with just 50k training pairs!
   </h4>
 
-  [![Paper](https://img.shields.io/badge/Paper-PDF-red)](https://arxiv.org/abs/2400.00000)
-  [![arXiv](https://img.shields.io/badge/arXiv-2400.00000-b31b1b.svg)](https://arxiv.org/abs/2400.00000)
-  [![Project Page](https://img.shields.io/badge/Project-Page-green)](https://videocof.github.io)
-  [![Hugging Face Model](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-yellow)](https://huggingface.co/XiangpengYang/VideoCoF)
-  [![Hugging Face Data](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Data-yellow)](https://huggingface.co/datasets)
+  <br>
+
+  **[**[**📄 Paper**](https://arxiv.org/abs/2400.00000)**]** **[**[**🌐 Project Page**](https://videocof.github.io)**]** **[**[**📦 Model Weights**](https://huggingface.co/XiangpengYang/VideoCoF)**]** **[**[**📊 Dataset**](https://huggingface.co/datasets)**]**
+
   ![visitors](https://visitor-badge.laobi.icu/badge?page_id=videocof.VideoCoF&left_color=green&right_color=red)
 
 </div>
@@ -33,18 +32,6 @@
   <br>
   <span style="font-size: 1em; color: #555;"><sup>1</sup>University of Technology Sydney, <sup>2</sup>Zhejiang University</span>
 </div>
-
-## 🔗 **Links & Resources**
-
-**[**[**📄 Paper**](https://arxiv.org/abs/2400.00000)**]**
-
-**[**[**🌐 Project Page**](https://videocof.github.io)**]**
-
-**[**[**📦 Model Weights**](https://huggingface.co/XiangpengYang/VideoCoF)**]**
-
-**[**[**📊 Dataset**](https://huggingface.co/datasets)**]**
-
-<br>
 
 ## 💿 Introduction
 
@@ -217,5 +204,5 @@ If you find this work useful for your research, please consider citing:
 
 ## ⭐️ Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=videocof/VideoCoF&type=Date)](https://star-history.com/#videocof/VideoCoF&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=knightyxp/VideoCoF&type=Date)](https://star-history.com/#knightyxp/VideoCoF&Date)
 
