@@ -15,7 +15,7 @@
   [![Paper](https://img.shields.io/badge/Paper-PDF-red)](https://arxiv.org/abs/2400.00000)
   [![arXiv](https://img.shields.io/badge/arXiv-2400.00000-b31b1b.svg)](https://arxiv.org/abs/2400.00000)
   [![Project Page](https://img.shields.io/badge/Project-Page-green)](https://videocof.github.io)
-  [![Hugging Face Model](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-yellow)](https://huggingface.co/models)
+  [![Hugging Face Model](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-yellow)](https://huggingface.co/XiangpengYang/VideoCoF)
   [![Hugging Face Data](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Data-yellow)](https://huggingface.co/datasets)
 
 </div>
@@ -100,7 +100,7 @@ Our models are available on Hugging Face:
 
 | Model Name | Description | Link |
 |------------|-------------|------|
-| VideoCoF-Base | Base model trained on 50k video pairs | [Hugging Face]() |
+| VideoCoF-Base | Base model trained on 50k video pairs | [Hugging Face](https://huggingface.co/XiangpengYang/VideoCoF) |
 
 ## 🍭 Results
 
