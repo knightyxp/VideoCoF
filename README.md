@@ -1,8 +1,11 @@
 <div align="center">
 
   <h1 style="margin: 0; font-size: 2.4em;">
-    Unified Video Editing with Temporal Reasoner <a href="https://videocof.github.io" target="_blank" style="font-size: 0.4em;">[Project Page]</a>
+    Unified Video Editing with Temporal Reasoner
   </h1>
+  <h2 style="margin: 10px 0; font-size: 1.5em;">
+    [<a href="https://videocof.github.io" target="_blank">Project Page</a>]
+  </h2>
   <h4 style="margin: 15px 0; color: #2c3e50;">
     👁️ See &rarr; 🧠 Reason &rarr; ✏️ Edit
   </h4>
