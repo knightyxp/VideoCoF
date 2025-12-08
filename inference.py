@@ -82,8 +82,9 @@ def load_video_frames(
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Video-to-video CoT reasoning generation from JSON task list with parallel inference")
-    parser.add_argument("--prompt", type=str, required=True, help="Text prompt for editing")
-    parser.add_argument("--video_path", type=str, required=True, help="Path to input video")
+    parser.add_argument("--test_json", type=str, default=None, help="Path to test JSON file for batch inference")
+    parser.add_argument("--prompt", type=str, default=None, help="Text prompt for editing (single mode)")
+    parser.add_argument("--video_path", type=str, default=None, help="Path to input video (single mode)")
     parser.add_argument("--model_name", type=str, default="/scratch3/yan204/models/Wan2.1-T2V-14B", help="Model checkpoint path")
     parser.add_argument("--output_dir", type=str, required=True, help="Output directory for generated videos")
     parser.add_argument("--seed", type=int, default=0, help="Random seed for reproducible generation")
@@ -186,12 +187,35 @@ def main():
     model_name = args.model_name
 
     # Load tasks
-    fname = os.path.basename(args.video_path)
-    item = {
-        "source_video_path": args.video_path,
-        "edit_instruction": args.prompt
-    }
-    items = [(fname, item)]
+    if args.test_json:
+        if rank == 0:
+            print(f"Loading tasks from JSON: {args.test_json}")
+        with open(args.test_json, 'r', encoding='utf-8') as f:
+            eval_prompts_list = json.load(f)
+
+        eval_prompts = {}
+        for item in eval_prompts_list:
+            # Assume item has structure compatible or use fallback logic
+            # Here we expect task_type/sample_id to uniquely identify, or we create a name
+            if 'task_type' in item and 'sample_id' in item:
+                fname = f"{item['task_type']}_{item['sample_id']}.mp4"
+            else:
+                # Fallback naming if JSON structure is different
+                fname = f"sample_{len(eval_prompts)}.mp4"
+            eval_prompts[fname] = item
+        items = list(eval_prompts.items())
+        
+    elif args.video_path and args.prompt:
+        if rank == 0:
+            print(f"Running in single video mode: {args.video_path}")
+        fname = os.path.basename(args.video_path)
+        item = {
+            "source_video_path": args.video_path,
+            "edit_instruction": args.prompt
+        }
+        items = [(fname, item)]
+    else:
+        raise ValueError("Must provide either --test_json or both --video_path and --prompt")
 
     # Filter done
     pending_items = []
@@ -200,7 +224,7 @@ def main():
         output_video_path = os.path.join(args.output_dir, f"gen_{base}.mp4")
         if not os.path.exists(output_video_path):
             pending_items.append((fname, item))
-
+    
     if rank == 0:
         print(f"Total items: {len(items)}, already generated: {len(items) - len(pending_items)}, pending: {len(pending_items)}")
 
