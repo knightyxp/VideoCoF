@@ -82,10 +82,12 @@ def load_video_frames(
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Video-to-video CoT reasoning generation from JSON task list with parallel inference")
-    parser.add_argument("--test_json", type=str, required=True, help="Path to test JSON file")
+    parser.add_argument("--prompt", type=str, required=True, help="Text prompt for editing")
+    parser.add_argument("--video_path", type=str, required=True, help="Path to input video")
+    parser.add_argument("--model_name", type=str, default="/scratch3/yan204/models/Wan2.1-T2V-14B", help="Model checkpoint path")
     parser.add_argument("--output_dir", type=str, required=True, help="Output directory for generated videos")
     parser.add_argument("--seed", type=int, default=0, help="Random seed for reproducible generation")
-    parser.add_argument("--lora_path", type=str, default=None, help="Path to LoRA checkpoint")
+    parser.add_argument("--videocof_path", type=str, default=None, help="Path to videocof weight checkpoint")
     parser.add_argument("--num_frames", type=int, default=65, help="Total number of frames (input + generated)")
     parser.add_argument("--source_frames", type=int, default=33, help="Number of source frames; default 33")
     parser.add_argument("--reasoning_frames", type=int, default=4, help="Grounding frames in the middle segment (pixel-space)")
@@ -181,17 +183,17 @@ def main():
         print(f"Running parallel CoT inference with {world_size} GPUs")
         print(f"Using seed: {args.seed}")
 
-    # Load tasks
-    with open(args.test_json, 'r', encoding='utf-8') as f:
-        eval_prompts_list = json.load(f)
+    model_name = args.model_name
 
-    eval_prompts = {}
-    for item in eval_prompts_list:
-        fname = f"{item['task_type']}_{item['sample_id']}.mp4"
-        eval_prompts[fname] = item
+    # Load tasks
+    fname = os.path.basename(args.video_path)
+    item = {
+        "source_video_path": args.video_path,
+        "edit_instruction": args.prompt
+    }
+    items = [(fname, item)]
 
     # Filter done
-    items = list(eval_prompts.items())
     pending_items = []
     for fname, item in items:
         base = os.path.splitext(fname)[0]
@@ -295,9 +297,9 @@ def main():
         pipeline.to(device=device)
 
     # LoRA
-    if args.lora_path is not None:
-        pipeline = merge_lora(pipeline, args.lora_path, lora_weight, device=device)
-        print(f"[GPU {rank}] Loaded LoRA from {args.lora_path}")
+    if args.videocof_path is not None:
+        pipeline = merge_lora(pipeline, args.videocof_path, lora_weight, device=device)
+        print(f"[GPU {rank}] Loaded LoRA from {args.videocof_path}")
 
     os.makedirs(args.output_dir, exist_ok=True)
 
@@ -362,8 +364,8 @@ def main():
 
         print(f"[GPU {rank}] Completed {fname}")
 
-    if args.lora_path is not None:
-        pipeline = unmerge_lora(pipeline, args.lora_path, lora_weight, device=device)
+    if args.videocof_path is not None:
+        pipeline = unmerge_lora(pipeline, args.videocof_path, lora_weight, device=device)
 
     print(f"[GPU {rank}] Finished processing all assigned items")
 
