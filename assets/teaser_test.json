@@ -14,7 +14,7 @@
       {
         "task_type": "local_style",
         "sample_id": "001",
-        "source_video_path": "assets/dough.mp4",
-        "qwen_vl_72b_refined_instruction": "Make the dough on the cutting board crusty and golden as if freshly baked."
+        "source_video_path": "assets/sign.mp4",
+        "qwen_vl_72b_refined_instruction": "Replace the yellow \"SCHOOL\" sign with a red hospital sign, featuring a white hospital emblem on the top and the word \"HOSPITAL\" below."
       }
 ]
