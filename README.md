@@ -206,5 +206,4 @@ If you find this work useful for your research, please consider citing:
 
 ## ⭐️ Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=knightyxp/VideoCoF&type=Date)](https://star-history.com/#knightyxp/VideoCoF&Date)
-
+[![Star History Chart](https://api.star-history.com/svg?repos=knightyxp/VideoCoF&type=Date&legend=top-left)](https://star-history.com/#knightyxp/VideoCoF&Date)
