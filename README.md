@@ -37,7 +37,7 @@
 
 ## 💿 Introduction
 
-https://github.com/user-attachments/assets/0e3eafae-3a62-4cd8-bf4a-37d9b280d05d
+https://github.com/user-attachments/assets/26f7d347-3d6c-43cf-9645-6eb5906f6ad6
 
 ## 🔥 News
 
