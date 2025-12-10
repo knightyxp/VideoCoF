@@ -348,7 +348,8 @@ if __name__ == "__main__":
     demo.queue(status_update_rate=1).launch(
         server_name=server_name,
         server_port=server_port,
-        prevent_thread_lock=True
+        prevent_thread_lock=True,
+        share=True
     )
     
     while True:
