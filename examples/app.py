@@ -349,7 +349,7 @@ if __name__ == "__main__":
         server_name=server_name,
         server_port=server_port,
         prevent_thread_lock=True,
-        share=True
+        share=False
     )
     
     while True:
