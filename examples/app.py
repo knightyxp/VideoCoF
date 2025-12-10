@@ -240,7 +240,7 @@ def ui(GPU_memory_mode, scheduler_dict, config_path, compile_dit, weight_dtype):
         weight_dtype=weight_dtype
     )
 
-    with gr.Blocks(css=css) as demo:
+    with gr.Blocks() as demo:
         gr.Markdown("# VideoCoF Demo")
         
         with gr.Column(variant="panel"):

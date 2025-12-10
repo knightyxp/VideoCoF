@@ -369,7 +369,7 @@ def ui(GPU_memory_mode, scheduler_dict, config_path, compile_dit, weight_dtype, 
         weight_dtype=weight_dtype, savedir_sample=savedir_sample,
     )
 
-    with gr.Blocks(css=css) as demo:
+    with gr.Blocks() as demo:
         gr.Markdown(
             """
             # Wan:
@@ -503,7 +503,7 @@ def ui_host(GPU_memory_mode, scheduler_dict, model_name, model_type, config_path
         weight_dtype=weight_dtype, savedir_sample=savedir_sample,
     )
 
-    with gr.Blocks(css=css) as demo:
+    with gr.Blocks() as demo:
         gr.Markdown(
             """
             # Wan:
@@ -623,7 +623,7 @@ def ui_host(GPU_memory_mode, scheduler_dict, model_name, model_type, config_path
 def ui_client(scheduler_dict, model_name, savedir_sample=None):
     controller = Wan_Controller_Client(scheduler_dict, savedir_sample)
 
-    with gr.Blocks(css=css) as demo:
+    with gr.Blocks() as demo:
         gr.Markdown(
             """
             # Wan:
