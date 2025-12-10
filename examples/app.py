@@ -267,7 +267,7 @@ def ui(GPU_memory_mode, scheduler_dict, config_path, compile_dit, weight_dtype):
                         repeat_rope_checkbox = gr.Checkbox(label="Repeat RoPE", value=True)
                         
                     resize_method, width_slider, height_slider, base_resolution = create_height_width(
-                        default_height=480, default_width=832
+                        default_height=480, default_width=832, maximum_height=1344, maximum_width=1344
                     )
                     
                     generation_method, length_slider, overlap_video_length, partial_video_length = \
