@@ -15,7 +15,7 @@ from ..data.bucket_sampler import ASPECT_RATIO_512, get_closest_ratio
 from ..models import (AutoencoderKLWan, AutoTokenizer, CLIPModel,
                       WanT5EncoderModel, WanTransformer3DModel)
 from ..models.cache_utils import get_teacache_coefficients
-from ..pipeline import WanI2VPipeline, WanPipeline
+from ..pipeline import WanPipeline
 from ..utils.fp8_optimization import (convert_model_weight_to_float8,
                                       convert_weight_dtype_wrapper,
                                       replace_parameters_by_name)
@@ -90,14 +90,15 @@ class Wan_Controller(Fun_Controller):
         # Get pipeline
         if self.model_type == "Inpaint":
             if self.transformer.config.in_channels != self.vae.config.latent_channels:
-                self.pipeline = WanI2VPipeline(
-                    vae=self.vae,
-                    tokenizer=self.tokenizer,
-                    text_encoder=self.text_encoder,
-                    transformer=self.transformer,
-                    scheduler=self.scheduler,
-                    clip_image_encoder=self.clip_image_encoder,
-                )
+                raise NotImplementedError("WanI2VPipeline is disabled.")
+                # self.pipeline = WanI2VPipeline(
+                #     vae=self.vae,
+                #     tokenizer=self.tokenizer,
+                #     text_encoder=self.text_encoder,
+                #     transformer=self.transformer,
+                #     scheduler=self.scheduler,
+                #     clip_image_encoder=self.clip_image_encoder,
+                # )
             else:
                 self.pipeline = WanPipeline(
                     vae=self.vae,
