@@ -1,20 +1,80 @@
 [
     {
+      "task_type": "obj_rem",
+      "sample_id": "001",
+      "source_video_path": "assets/two_man.mp4",
+      "qwen_vl_72b_refined_instruction": "Remove the young man with short black hair wearing black shirt on the left."
+    },
+    {
+      "task_type": "obj_rem",
+      "sample_id": "002",
+      "source_video_path": "assets/three_people.mp4",
+      "qwen_vl_72b_refined_instruction": "Remove the man with short dark hair wearing a gray suit on the right"
+    },
+    {
+      "task_type": "obj_rem",
+      "sample_id": "003",
+      "source_video_path": "assets/office.mp4",
+      "qwen_vl_72b_refined_instruction": "Remove the beige CRT computer setup."
+    },
+    {
         "task_type": "obj_add",
         "sample_id": "001",
         "source_video_path": "assets/woman_ballon.mp4",
         "qwen_vl_72b_refined_instruction": "Add the woman in a floral dress pointing at the balloon on the left."
-      },
-      {
-        "task_type": "obj_rem",
-        "sample_id": "001",
-        "source_video_path": "assets/two_man.mp4",
-        "qwen_vl_72b_refined_instruction": "Remove the young man with short black hair wearing black shirt on the left."
-      },
-      {
-        "task_type": "local_style",
-        "sample_id": "001",
-        "source_video_path": "assets/sign.mp4",
-        "qwen_vl_72b_refined_instruction": "Replace the yellow \"SCHOOL\" sign with a red hospital sign, featuring a white hospital emblem on the top and the word \"HOSPITAL\" below."
-      }
+    },
+    {
+      "task_type": "obj_add",
+      "sample_id": "002",
+      "source_video_path": "assets/greenhouse.mp4",
+      "qwen_vl_72b_refined_instruction": "A white Samoyed is watching the man, who crouches in a greenhouse. The Samoyed is covered in thick, fluffy white fur, giving it a very soft and plush appearance. Its ears are erect and triangular, making it look alert and intelligent. The Samoyed's face features its signature smile, with bright black eyes that convey friendliness and curiosity."
+    },
+    {
+      "task_type": "obj_add",
+      "sample_id": "003",
+      "source_video_path": "assets/gameplay.mp4",
+      "qwen_vl_72b_refined_instruction": "Add the woman holding the blue game controller to the left of the man, engaged in gameplay."
+    },
+    {
+      "task_type": "obj_add",
+      "sample_id": "004",
+      "source_video_path": "assets/dog.mp4",
+      "qwen_vl_72b_refined_instruction": "Add the brown and white beagle interacting with and drinking from the metallic bowl on the wooden floor."
+    },
+    {
+      "task_type": "obj_swap",
+      "sample_id": "001",
+      "source_video_path": "assets/sign.mp4",
+      "qwen_vl_72b_refined_instruction": "Replace the yellow \"SCHOOL\" sign with a red hospital sign, featuring a white hospital emblem on the top and the word \"HOSPITAL\" below."
+    },
+    {
+      "task_type": "obj_swap",
+      "sample_id": "002",
+      "source_video_path": "assets/old_man.mp4",
+      "qwen_vl_72b_refined_instruction": "Swap the old man with long white hair and a blue checkered shirt at the left side of the frame with a woman with curly brown hair and a denim shirt."
+    },
+    {
+      "task_type": "obj_swap",
+      "sample_id": "003",
+      "source_video_path": "assets/pants.mp4",
+      "qwen_vl_72b_refined_instruction": "swap the white pants worn by the individual the light blue jeans."
+    },
+    {
+      "task_type": "local_style",
+      "sample_id": "001",
+      "source_video_path": "assets/bowl.mp4",
+      "qwen_vl_72b_refined_instruction": "Make the largest cup on the right white and smooth."
+    },
+    {
+      "task_type": "local_style",
+      "sample_id": "002",
+      "source_video_path": "assets/ketchup.mp4",
+      "qwen_vl_72b_refined_instruction": "Make the ketchup bottle to the right of the BBQ sauce bottle violet color."
+    },
+    {
+      "task_type": "local_style",
+      "sample_id": "003",
+      "source_video_path": "assets/fruit.mp4",
+      "qwen_vl_72b_refined_instruction": "Make the pomegranate at the right side of the basket lavender color."
+    }
 ]

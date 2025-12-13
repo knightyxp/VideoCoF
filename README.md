@@ -16,6 +16,7 @@
   [![arXiv](https://img.shields.io/badge/arXiv-2512.07469-b31b1b.svg)](https://arxiv.org/abs/2512.07469)
   [![Project Page](https://img.shields.io/badge/Project-Page-green)](https://videocof.github.io)
   [![Hugging Face Model](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-yellow)](https://huggingface.co/XiangpengYang/VideoCoF)
+  [![Hugging Face Demo](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Demo-blue)](https://huggingface.co/spaces/XiangpengYang/VideoCoF)
   ![visitors](https://visitor-badge.laobi.icu/badge?page_id=videocof.VideoCoF&left_color=green&right_color=red)
 
 </div>
@@ -41,6 +42,7 @@ https://github.com/user-attachments/assets/26f7d347-3d6c-43cf-9645-6eb5906f6ad6
 
 ## 🔥 News
 
+- **2025.12.13**: 🚀 We released a **4-step fast inference script** (~20-30s per video) and launched the Hugging Face demo! Please try it at [Hugging Face Spaces](https://huggingface.co/spaces/XiangpengYang/VideoCoF).
 - **2025.12.09**: Paper available on arXiv.
 - **2025.12.08**: Release the inference code and videocof-50k weight.
 - **2025.12.06**: 🔥 Project Page and README updated!
@@ -59,6 +61,8 @@ https://github.com/user-attachments/assets/26f7d347-3d6c-43cf-9645-6eb5906f6ad6
 - [📄 Citation](#-citation)
 
 ## 🔧 Quick Start
+
+**Online Demo:** Try out our enhanced VideoCoF demo on Hugging Face Spaces [here](https://huggingface.co/spaces/XiangpengYang/VideoCoF)!
 
 1.  **Clone the repository:**
 
@@ -102,7 +106,7 @@ https://github.com/user-attachments/assets/26f7d347-3d6c-43cf-9645-6eb5906f6ad6
         # hf download Wan-AI/Wan2.1-T2V-14B --local-dir Wan2.1-T2V-14B
         ```
 
-    **VideoCoF Checkpoint:**
+    **VideoCoF Checkpoint & Acceleration LoRA:**
         
         ```bash
         git lfs install
@@ -110,9 +114,14 @@ https://github.com/user-attachments/assets/26f7d347-3d6c-43cf-9645-6eb5906f6ad6
 
         # Or using huggingface-cli:
         # hf download XiangpengYang/VideoCoF --local-dir videocof_weight
+        
+        # Download Acceleration LoRA (FusionX)
+        wget -P videocof_weight https://huggingface.co/MonsterMMORPG/Wan_GGUF/resolve/main/Wan2.1_Text_to_Video_14B_FusionX_LoRA.safetensors
         ```
 
 4.  **Inference:**
+
+    We provide **Fast 4-step inference** (Default, ~30s/video on H100) using acceleration LoRA.
 
     For single inference tasks:
 
@@ -123,6 +132,9 @@ https://github.com/user-attachments/assets/26f7d347-3d6c-43cf-9645-6eb5906f6ad6
     # Object Addition
     sh scripts/obj_add.sh
 
+    # Object Swap
+    sh scripts/obj_swap.sh
+
     # Local Style Transfer
     sh scripts/local_style.sh
     ```
@@ -132,6 +144,18 @@ https://github.com/user-attachments/assets/26f7d347-3d6c-43cf-9645-6eb5906f6ad6
     ```bash
     sh scripts/parallel_infer.sh
     ```
+
+    **Manual Fast Inference Command:**
+
+    ```bash
+    python fast_infer.py \
+      --video_path assets/bowl.mp4 \
+      --prompt "Make the soup look spicy" \
+      --output_dir outputs/fast_demo \
+      --enable_acceleration_lora
+    ```
+
+
 
 ## 🏆 Model Zoo
 

@@ -465,10 +465,20 @@ def merge_lora(pipeline, lora_path, multiplier, device='cpu', dtype=torch.float3
                 if error_flag:
                     continue
 
+        # Some resolved modules (e.g., container blocks/norm-only) may not have a weight parameter.
+        if not hasattr(curr_layer, "weight"):
+            # Skip incompatible / non-leaf modules
+            continue
+
         origin_dtype = curr_layer.weight.data.dtype
         origin_device = curr_layer.weight.data.device
 
         curr_layer = curr_layer.to(device, dtype)
+        # Some checkpoints (e.g., norm-only entries) may not contain both weights.
+        if 'lora_up.weight' not in elems or 'lora_down.weight' not in elems:
+            # Skip incompatible layer instead of raising KeyError
+            curr_layer = curr_layer.to(origin_device, origin_dtype)
+            continue
         weight_up = elems['lora_up.weight'].to(device, dtype)
         weight_down = elems['lora_down.weight'].to(device, dtype)
         
@@ -579,10 +589,16 @@ def unmerge_lora(pipeline, lora_path, multiplier=1, device="cpu", dtype=torch.fl
                 if error_flag:
                     continue
 
+        if not hasattr(curr_layer, "weight"):
+            continue
+
         origin_dtype = curr_layer.weight.data.dtype
         origin_device = curr_layer.weight.data.device
 
         curr_layer = curr_layer.to(device, dtype)
+        if 'lora_up.weight' not in elems or 'lora_down.weight' not in elems:
+            curr_layer = curr_layer.to(origin_device, origin_dtype)
+            continue
         weight_up = elems['lora_up.weight'].to(device, dtype)
         weight_down = elems['lora_down.weight'].to(device, dtype)
         

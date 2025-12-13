@@ -6,13 +6,13 @@ import gradio as gr
 def create_model_type(visible):
     gr.Markdown(
         """
-        ### Model Type (模型的种类，正常模型还是控制模型).
+        ### Model Type.
         """,
         visible=visible,
     )
     with gr.Row():
         model_type = gr.Dropdown(
-            label="The model type of the model (模型的种类，正常模型还是控制模型)",
+            label="The model type of the model",
             choices=["Inpaint", "Control"],
             value="Inpaint",
             visible=visible,
@@ -23,13 +23,13 @@ def create_model_type(visible):
 def create_fake_model_type(visible):
     gr.Markdown(
         """
-        ### Model Type (模型的种类，正常模型还是控制模型).
+        ### Model Type.
         """,
         visible=visible,
     )
     with gr.Row():
         model_type = gr.Dropdown(
-            label="The model type of the model (模型的种类，正常模型还是控制模型)",
+            label="The model type of the model",
             choices=["Inpaint", "Control"],
             value="Inpaint",
             interactive=False,
@@ -37,17 +37,18 @@ def create_fake_model_type(visible):
         )
     return model_type
 
-def create_model_checkpoints(controller, visible):
+def create_model_checkpoints(controller, visible, default_model="none"):
     gr.Markdown(
         """
-        ### Model checkpoints (模型路径).
-        """
+        ### Model checkpoints.
+        """,
+        visible=visible
     )
     with gr.Row(visible=visible):
         diffusion_transformer_dropdown = gr.Dropdown(
-            label="Pretrained Model Path (预训练模型路径)",
-            choices=controller.diffusion_transformer_list,
-            value="none",
+            label="Pretrained Model Path",
+            choices=list(set(controller.diffusion_transformer_list + [default_model])),
+            value=default_model,
             interactive=True,
         )
         diffusion_transformer_dropdown.change(
@@ -67,49 +68,49 @@ def create_model_checkpoints(controller, visible):
 def create_fake_model_checkpoints(model_name, visible):
     gr.Markdown(
         """
-        ### Model checkpoints (模型路径).
+        ### Model checkpoints.
         """
     )
     with gr.Row(visible=visible):
         diffusion_transformer_dropdown = gr.Dropdown(
-            label="Pretrained Model Path (预训练模型路径)",
+            label="Pretrained Model Path",
             choices=[model_name],
             value=model_name,
             interactive=False,
         )
     return diffusion_transformer_dropdown
 
-def create_finetune_models_checkpoints(controller, visible, add_checkpoint_2=False):
+def create_finetune_models_checkpoints(controller, visible, add_checkpoint_2=False, default_lora="none"):
     with gr.Row(visible=visible):
         base_model_dropdown = gr.Dropdown(
-            label="Select base Dreambooth model (选择基模型[非必需])",
+            label="Select base Dreambooth model",
             choices=["none"] + controller.personalized_model_list,
             value="none",
             interactive=True,
         )
         if add_checkpoint_2:
             base_model_2_dropdown = gr.Dropdown(
-                label="Select base Dreambooth model (选择第二个基模型[非必需])",
+                label="Select base Dreambooth model",
                 choices=["none"] + controller.personalized_model_list,
                 value="none",
                 interactive=True,
             )
         
         lora_model_dropdown = gr.Dropdown(
-            label="Select LoRA model (选择LoRA模型[非必需])",
-            choices=["none"] + controller.personalized_model_list,
-            value="none",
+            label="Select LoRA model",
+            choices=list(set(["none"] + controller.personalized_model_list + [default_lora])),
+            value=default_lora,
             interactive=True,
         )
         if add_checkpoint_2:
             lora_model_2_dropdown = gr.Dropdown(
-            label="Select LoRA model (选择LoRA模型[非必需])",
+            label="Select LoRA model",
                 choices=["none"] + controller.personalized_model_list,
                 value="none",
                 interactive=True,
             )
 
-        lora_alpha_slider = gr.Slider(label="LoRA alpha (LoRA权重)", value=0.55, minimum=0, maximum=2, interactive=True)
+        lora_alpha_slider = gr.Slider(label="LoRA alpha", value=0.55, minimum=0, maximum=2, interactive=True)
         
         personalized_refresh_button = gr.Button(value="\U0001F503", elem_classes="toolbutton")
         def update_personalized_model():
@@ -129,7 +130,7 @@ def create_finetune_models_checkpoints(controller, visible, add_checkpoint_2=Fal
 def create_fake_finetune_models_checkpoints(visible):
     with gr.Row():
         base_model_dropdown = gr.Dropdown(
-            label="Select base Dreambooth model (选择基模型[非必需])",
+            label="Select base Dreambooth model",
             choices=["none"],
             value="none",
             interactive=False,
@@ -149,7 +150,7 @@ def create_fake_finetune_models_checkpoints(visible):
                     interactive=True,
                 )
 
-                lora_alpha_slider = gr.Slider(label="LoRA alpha (LoRA权重)", value=0.55, minimum=0, maximum=2, interactive=True)
+                lora_alpha_slider = gr.Slider(label="LoRA alpha", value=0.55, minimum=0, maximum=2, interactive=True)
         
     return base_model_dropdown, lora_model_dropdown, lora_alpha_slider
 
@@ -168,35 +169,35 @@ def create_teacache_params(
 def create_cfg_skip_params(
     cfg_skip_ratio = 0
 ):
-    cfg_skip_ratio = gr.Slider(0.00, 0.50, value=cfg_skip_ratio, step=0.01, label="CFG Skip Ratio")
+    cfg_skip_ratio = gr.Slider(0.00, 0.50, value=cfg_skip_ratio, step=0.01, label="CFG Skip Ratio", visible=False)
     return cfg_skip_ratio
 
 def create_cfg_riflex_k(
     enable_riflex = False,
     riflex_k = 6
 ):
-    enable_riflex = gr.Checkbox(label="Enable Riflex", value=enable_riflex)
-    riflex_k = gr.Slider(0, 10, value=riflex_k, step=1, label="Riflex Intrinsic Frequency Index")
+    enable_riflex = gr.Checkbox(label="Enable Riflex", value=enable_riflex, visible=False)
+    riflex_k = gr.Slider(0, 10, value=riflex_k, step=1, label="Riflex Intrinsic Frequency Index", visible=False)
     return enable_riflex, riflex_k
 
 def create_prompts(
     prompt="A young woman with beautiful and clear eyes and blonde hair standing and white dress in a forest wearing a crown. She seems to be lost in thought, and the camera focuses on her face. The video is of high quality, and the view is very clear. High quality, masterpiece, best quality, highres, ultra-detailed, fantastic.",
-    negative_prompt="The video is not of a high quality, it has a low resolution. Watermark present in each frame. The background is solid. Strange body and strange trajectory. Distortion. "
+    negative_prompt="Bright tones, overexposed, static, blurred details, subtitles, style, works, paintings, images, static, overall gray, worst quality, low quality, JPEG compression residue, ugly, incomplete, extra fingers, poorly drawn hands, poorly drawn faces, deformed, disfigured, misshapen limbs, fused fingers, still picture, messy background, three legs, many people in the background, walking backwards"
 ):
     gr.Markdown(
         """
-        ### Configs for Generation (生成参数配置).
+        ### Configs for Generation.
         """
     )
     
-    prompt_textbox = gr.Textbox(label="Prompt (正向提示词)", lines=2, value=prompt)
-    negative_prompt_textbox = gr.Textbox(label="Negative prompt (负向提示词)", lines=2, value=negative_prompt)
+    prompt_textbox = gr.Textbox(label="Prompt", lines=2, value=prompt)
+    negative_prompt_textbox = gr.Textbox(label="Negative prompt", lines=2, value=negative_prompt)
     return prompt_textbox, negative_prompt_textbox
 
-def create_samplers(controller, maximum_step=100):
+def create_samplers(controller, maximum_step=50):
     with gr.Row():
-        sampler_dropdown   = gr.Dropdown(label="Sampling method (采样器种类)", choices=list(controller.scheduler_dict.keys()), value=list(controller.scheduler_dict.keys())[0])
-        sample_step_slider = gr.Slider(label="Sampling steps (生成步数)", value=50, minimum=10, maximum=maximum_step, step=1)
+        sampler_dropdown   = gr.Dropdown(label="Sampling method", choices=list(controller.scheduler_dict.keys()), value=list(controller.scheduler_dict.keys())[0])
+        sample_step_slider = gr.Slider(label="Sampling steps", value=4, minimum=1, maximum=maximum_step, step=1)
         
     return sampler_dropdown, sample_step_slider
 
@@ -206,8 +207,8 @@ def create_height_width(default_height, default_width, maximum_height, maximum_w
         value="Generate by",
         show_label=False,
     )
-    width_slider     = gr.Slider(label="Width (视频宽度)", value=default_width, minimum=128, maximum=maximum_width, step=16)
-    height_slider    = gr.Slider(label="Height (视频高度)", value=default_height, minimum=128, maximum=maximum_height, step=16)
+    width_slider     = gr.Slider(label="Width", value=default_width, minimum=128, maximum=maximum_width, step=16)
+    height_slider    = gr.Slider(label="Height", value=default_height, minimum=128, maximum=maximum_height, step=16)
     base_resolution  = gr.Radio(label="Base Resolution of Pretrained Models", value=512, choices=[512, 640, 768, 896, 960, 1024], visible=False)
 
     return resize_method, width_slider, height_slider, base_resolution
@@ -218,8 +219,8 @@ def create_fake_height_width(default_height, default_width, maximum_height, maxi
         value="Generate by",
         show_label=False,
     )
-    width_slider     = gr.Slider(label="Width (视频宽度)", value=default_width, minimum=128, maximum=maximum_width, step=16, interactive=False)
-    height_slider    = gr.Slider(label="Height (视频高度)", value=default_height, minimum=128, maximum=maximum_height, step=16, interactive=False)
+    width_slider     = gr.Slider(label="Width", value=default_width, minimum=128, maximum=maximum_width, step=16, interactive=False)
+    height_slider    = gr.Slider(label="Height", value=default_height, minimum=128, maximum=maximum_height, step=16, interactive=False)
     base_resolution  = gr.Radio(label="Base Resolution of Pretrained Models", value=512, choices=[512, 640, 768, 896, 960, 1024], interactive=False, visible=False)
 
     return resize_method, width_slider, height_slider, base_resolution
@@ -234,23 +235,25 @@ def create_generation_methods_and_video_length(
             generation_method_options,
             value="Video Generation",
             show_label=False,
+            visible=False
         )
         with gr.Row():
-            length_slider = gr.Slider(label="Animation length (视频帧数)", value=default_video_length, minimum=1,   maximum=maximum_video_length,  step=4)
-            overlap_video_length = gr.Slider(label="Overlap length (视频续写的重叠帧数)", value=4, minimum=1,   maximum=4,  step=1, visible=False)
-            partial_video_length = gr.Slider(label="Partial video generation length (每个部分的视频生成帧数)", value=25, minimum=5,   maximum=maximum_video_length,  step=4, visible=False)
+            length_slider = gr.Slider(label="Animation length", value=default_video_length, minimum=1,   maximum=maximum_video_length,  step=4, visible=False)
+            overlap_video_length = gr.Slider(label="Overlap length", value=4, minimum=1,   maximum=4,  step=1, visible=False)
+            partial_video_length = gr.Slider(label="Partial video generation length", value=25, minimum=5,   maximum=maximum_video_length,  step=4, visible=False)
                     
     return generation_method, length_slider, overlap_video_length, partial_video_length
 
-def create_generation_method(source_method_options, prompt_textbox, support_end_image=True, support_ref_image=False):
+def create_generation_method(source_method_options, prompt_textbox, support_end_image=True, support_ref_image=False, default_video=None, video_examples=None):
+    default_method = source_method_options[0] if source_method_options else "Text to Video"
     source_method = gr.Radio(
         source_method_options,
-        value="Text to Video (文本到视频)",
+        value=default_method,
         show_label=False,
     )
-    with gr.Column(visible = False) as image_to_video_col:
+    with gr.Column(visible = (default_method == "Image to Video")) as image_to_video_col:
         start_image = gr.Image(
-            label="The image at the beginning of the video (图片到视频的开始图片)",  show_label=True, 
+            label="The image at the beginning of the video",  show_label=True, 
             elem_id="i2v_start", sources="upload", type="filepath", 
         )
         
@@ -275,27 +278,32 @@ def create_generation_method(source_method_options, prompt_textbox, support_end_
         )
         template_gallery.select(select_template, None, [start_image, prompt_textbox])
         
-        with gr.Accordion("The image at the ending of the video (图片到视频的结束图片[非必需, Optional])", open=False, visible=support_end_image):
-            end_image   = gr.Image(label="The image at the ending of the video (图片到视频的结束图片[非必需, Optional])", show_label=False, elem_id="i2v_end", sources="upload", type="filepath")
+        with gr.Accordion("The image at the ending of the video", open=False, visible=support_end_image):
+            end_image   = gr.Image(label="The image at the ending of the video", show_label=False, elem_id="i2v_end", sources="upload", type="filepath")
 
-    with gr.Column(visible = False) as video_to_video_col:
+    with gr.Column(visible = (default_method == "Video to Video")) as video_to_video_col:
         with gr.Row():
             validation_video = gr.Video(
-                label="The video to convert (视频转视频的参考视频)",  show_label=True, 
-                elem_id="v2v", sources="upload", 
+                label="The video to convert",  show_label=True, 
+                elem_id="v2v", sources=["upload"], value=default_video,
             )
-        with gr.Accordion("The mask of the video to inpaint (视频重新绘制的mask[非必需, Optional])", open=False):
-            gr.Markdown(
-                """
-                - Please set a larger denoise_strength when using validation_video_mask, such as 1.00 instead of 0.70  
-                (请设置更大的denoise_strength，当使用validation_video_mask的时候，比如1而不是0.70)
-                """
+        if video_examples:
+            gr.Examples(
+                examples=video_examples,
+                inputs=[validation_video, prompt_textbox] if len(video_examples[0]) > 1 else validation_video,
+                label="Video Examples"
             )
-            validation_video_mask = gr.Image(
-                label="The mask of the video to inpaint (视频重新绘制的mask[非必需, Optional])",
-                show_label=False, elem_id="v2v_mask", sources="upload", type="filepath"
-            )
-        denoise_strength = gr.Slider(label="Denoise strength (重绘系数)", value=0.70, minimum=0.10, maximum=1.00, step=0.01)
+
+        # Removed Mask Accordion entirely per request or hidden. User said "mask这个不需要"
+        # validation_video_mask = gr.Image(
+        #     label="The mask of the video to inpaint",
+        #     show_label=False, elem_id="v2v_mask", sources="upload", type="filepath",
+        #     visible=False
+        # )
+        validation_video_mask = gr.Image(visible=False, value=None) 
+        
+        # Denoise strength default 1.0, hidden
+        denoise_strength = gr.Slider(label="Denoise strength", value=1.00, minimum=0.10, maximum=1.00, step=0.01, visible=False)
 
     with gr.Column(visible = False) as control_video_col:
         gr.Markdown(
@@ -304,20 +312,21 @@ def create_generation_method(source_method_options, prompt_textbox, support_end_
             """
         )
         control_video = gr.Video(
-            label="The control video (用于提供控制信号的video)",  show_label=True, 
+            label="The control video",  show_label=True, 
             elem_id="v2v_control", sources="upload", 
         )
         ref_image = gr.Image(
-            label="The reference image for control video (控制视频的参考图片)",  show_label=True, 
+            label="The reference image for control video",  show_label=True, 
             elem_id="ref_image", sources="upload", type="filepath", visible=support_ref_image
         )
     return image_to_video_col, video_to_video_col, control_video_col, source_method, start_image, template_gallery, end_image, validation_video, validation_video_mask, denoise_strength, control_video, ref_image
 
 def create_cfg_and_seedbox(gradio_version_is_above_4):
-    cfg_scale_slider  = gr.Slider(label="CFG Scale (引导系数)",        value=6.0, minimum=0,   maximum=20)
+    # cfg default 6, hidden
+    cfg_scale_slider  = gr.Slider(label="CFG Scale",        value=6.0, minimum=0,   maximum=20, visible=False)
     
     with gr.Row():
-        seed_textbox = gr.Textbox(label="Seed (随机种子)", value=43)
+        seed_textbox = gr.Textbox(label="Seed", value=43)
         seed_button  = gr.Button(value="\U0001F3B2", elem_classes="toolbutton")
         seed_button.click(
             fn=lambda: gr.Textbox(value=random.randint(1, 1e8)) if gradio_version_is_above_4 else gr.Textbox.update(value=random.randint(1, 1e8)), 
@@ -328,10 +337,10 @@ def create_cfg_and_seedbox(gradio_version_is_above_4):
 
 def create_ui_outputs():
     with gr.Column():
-        result_image = gr.Image(label="Generated Image (生成图片)", interactive=False, visible=False)
-        result_video = gr.Video(label="Generated Animation (生成视频)", interactive=False)
+        result_image = gr.Image(label="Generated Image", interactive=False, visible=False)
+        result_video = gr.Video(label="Generated Animation", interactive=False)
         infer_progress = gr.Textbox(
-            label="Generation Info (生成信息)",
+            label="Generation Info",
             value="No task currently",
             interactive=False
     )
@@ -345,7 +354,7 @@ def create_config(controller):
     )
     with gr.Row():
         config_dropdown = gr.Dropdown(
-            label="Config Path (配置文件路径)",
+            label="Config Path",
             choices=controller.config_list,
             value=controller.config_path,
             interactive=True,

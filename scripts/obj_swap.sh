@@ -2,9 +2,9 @@ export CUDA_VISIBLE_DEVICES=0
 
 # sample_id: 001
 torchrun --nproc_per_node=1 fast_infer.py \
-  --video_path assets/bowl.mp4 \
-  --prompt "Make the largest cup on the right white and smooth." \
-  --output_dir results/local_style_1 \
+  --video_path assets/sign.mp4 \
+  --prompt "Replace the yellow \"SCHOOL\" sign with a red hospital sign, featuring a white hospital emblem on the top and the word \"HOSPITAL\" below." \
+  --output_dir results/obj_swap_1 \
   --model_name models/Wan2.1-T2V-14B \
   --videocof_path videocof_weight/videocof.safetensors \
   --enable_acceleration_lora \
@@ -16,9 +16,9 @@ torchrun --nproc_per_node=1 fast_infer.py \
 
 # sample_id: 002
 torchrun --nproc_per_node=1 fast_infer.py \
-  --video_path assets/ketchup.mp4 \
-  --prompt "Make the ketchup bottle to the right of the BBQ sauce bottle violet color." \
-  --output_dir results/local_style_2 \
+  --video_path assets/old_man.mp4 \
+  --prompt "Swap the old man with long white hair and a blue checkered shirt at the left side of the frame with a woman with curly brown hair and a denim shirt." \
+  --output_dir results/obj_swap_2 \
   --model_name models/Wan2.1-T2V-14B \
   --videocof_path videocof_weight/videocof.safetensors \
   --enable_acceleration_lora \
@@ -30,9 +30,9 @@ torchrun --nproc_per_node=1 fast_infer.py \
 
 # sample_id: 003
 torchrun --nproc_per_node=1 fast_infer.py \
-  --video_path assets/fruit.mp4 \
-  --prompt "Make the pomegranate at the right side of the basket lavender color." \
-  --output_dir results/local_style_3 \
+  --video_path assets/pants.mp4 \
+  --prompt "swap the white pants worn by the individual the light blue jeans." \
+  --output_dir results/obj_swap_3 \
   --model_name models/Wan2.1-T2V-14B \
   --videocof_path videocof_weight/videocof.safetensors \
   --enable_acceleration_lora \
