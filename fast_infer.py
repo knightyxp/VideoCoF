@@ -136,7 +136,7 @@ def parse_args():
 GPU_memory_mode = "sequential_cpu_offload"
 ulysses_degree = 1
 ring_degree = 1
-fsdp_dit = False
+ffdp_dit = False
 fsdp_text_encoder = True
 compile_dit = False
 enable_teacache = True

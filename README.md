@@ -145,6 +145,17 @@ https://github.com/user-attachments/assets/26f7d347-3d6c-43cf-9645-6eb5906f6ad6
     sh scripts/parallel_infer.sh
     ```
 
+5.  **Gradio Demo:**
+
+    Launch the Gradio interface for interactive testing:
+
+    ```bash
+    # Ensure Wan2.1-T2V-14B (model_name), videocof_weight and dmd lora are in the current directory or properly referenced
+    python examples/app.py
+    ```
+    
+    The demo supports fast inference (~30s per video) online.
+
 ## 🏆 Model Zoo
 
 Our models are available on Hugging Face:
@@ -183,9 +194,10 @@ Current video editing methods typically follow two paths:
 
 - [x] Release paper.
 - [x] Release inference code and weights.
+- [x] Release Hugging Face demo (~30s infer a video online), try it at [Hugging Face Spaces](https://huggingface.co/spaces/XiangpengYang/VideoCoF).
+- [ ] Release videocof-50k training data.
 - [ ] Release training code.
-- [ ] Release training data.
-- [ ] Add Hugging Face demo.
+
 
 ## 🙏 Acknowledgments
 
