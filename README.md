@@ -145,18 +145,6 @@ https://github.com/user-attachments/assets/26f7d347-3d6c-43cf-9645-6eb5906f6ad6
     sh scripts/parallel_infer.sh
     ```
 
-    **Manual Fast Inference Command:**
-
-    ```bash
-    python fast_infer.py \
-      --video_path assets/bowl.mp4 \
-      --prompt "Make the soup look spicy" \
-      --output_dir outputs/fast_demo \
-      --enable_acceleration_lora
-    ```
-
-
-
 ## 🏆 Model Zoo
 
 Our models are available on Hugging Face:
