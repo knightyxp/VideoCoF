@@ -121,7 +121,7 @@ https://github.com/user-attachments/assets/26f7d347-3d6c-43cf-9645-6eb5906f6ad6
 
 4.  **Inference:**
 
-    We provide **Fast 4-step inference** (Default, ~30s/video on H100) using acceleration LoRA.
+    🚀We provide **Fast 4-step inference** (Default, ~30s/video on H100) using acceleration LoRA.
 
     For single inference tasks:
 
