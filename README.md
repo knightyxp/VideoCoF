@@ -12,8 +12,8 @@
     🚀 A Chain of Frames video editing method enbale temporal reasoning and 4x video length extrapolation with just 50k training pairs!
   </h4>
 
-  [![Hugging Face Daily Paper](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Daily%20Paper-yellow)](https://huggingface.co/papers/2512.07469)
-  [![arXiv](https://img.shields.io/badge/arXiv-2512.07469-b31b1b.svg)](https://arxiv.org/abs/2512.07469)
+  <!-- [![Hugging Face Daily Paper](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Daily%20Paper-yellow)](https://huggingface.co/papers/2512.07469) -->
+  [![ArXiv](https://img.shields.io/badge/arXiv-2512.07469-b31b1b.svg)](https://arxiv.org/abs/2512.07469)
   [![Project Page](https://img.shields.io/badge/Project-Page-green)](https://videocof.github.io)
   [![Hugging Face Model](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-yellow)](https://huggingface.co/XiangpengYang/VideoCoF)
   [![Hugging Face Demo](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Demo-blue)](https://huggingface.co/spaces/XiangpengYang/VideoCoF)
