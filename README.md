@@ -54,7 +54,6 @@ https://github.com/user-attachments/assets/26f7d347-3d6c-43cf-9645-6eb5906f6ad6
 - [🔧 Quick Start](#-quick-start)
 - [🏆 Model Zoo](#-model-zoo)
 - [🍭 Results](#-results)
-- [🎨 Edit Comparison](#-edit-comparison)
 - [🚧 TODO](#-todo)
 - [🙏 Acknowledgments](#-acknowledgments)
 - [📜 License](#-license)
