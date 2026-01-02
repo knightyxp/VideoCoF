@@ -23,7 +23,7 @@
 
 <div align="center">
   <b>
-    <a href="https://scholar.google.com/citations?user=reiIeYMAAAAJ">Xiangpeng Yang</a><sup>1</sup>,
+    <a href="https://xiangpengyang.github.io/">Xiangpeng Yang</a><sup>1</sup>,
     <a href="https://horizonwind2004.github.io/">Ji Xie</a><sup>2</sup>,
     <a href="https://scholar.google.com/citations?user=OvfI_HMAAAAJ">Yiyuan Yang</a><sup>1</sup>,
     <a href="https://scholar.google.com/citations?user=zfeWd6gAAAAJ">Yan Huang</a><sup>1</sup>,
