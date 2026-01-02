@@ -17,7 +17,7 @@
   [![Project Page](https://img.shields.io/badge/Project-Page-green)](https://videocof.github.io)
   [![Hugging Face Model](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-yellow)](https://huggingface.co/XiangpengYang/VideoCoF)
   [![Hugging Face Demo](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Demo-blue)](https://huggingface.co/spaces/XiangpengYang/VideoCoF)
-  ![visitors](https://visitor-badge.laobi.icu/badge?page_id=videocof.VideoCoF&left_color=green&right_color=red)
+  [![Hugging Face Dataset](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Dataset-green)](https://huggingface.co/datasets/XiangpengYang/VideoCoF-50k)
 
 </div>
 
@@ -42,6 +42,7 @@ https://github.com/user-attachments/assets/26f7d347-3d6c-43cf-9645-6eb5906f6ad6
 
 ## 🔥 News
 
+- **2026.01.02**: 📚 We released the full **VideoCoF-50k** training dataset! Check it out at [Hugging Face Datasets](https://huggingface.co/datasets/XiangpengYang/VideoCoF-50k).
 - **2025.12.13**: 🚀 We released a **4-step fast inference script** (~20-30s per video) and launched the Hugging Face demo! Please try it at [Hugging Face Spaces](https://huggingface.co/spaces/XiangpengYang/VideoCoF).
 - **2025.12.09**: Paper available on arXiv.
 - **2025.12.08**: Release the inference code and videocof-50k weight.
@@ -195,7 +196,7 @@ Current video editing methods typically follow two paths:
 - [x] Release paper.
 - [x] Release inference code and weights.
 - [x] Release Hugging Face demo (~30s infer a video online), try it at [Hugging Face Spaces](https://huggingface.co/spaces/XiangpengYang/VideoCoF).
-- [ ] Release videocof-50k training data.
+- [x] Release videocof-50k training data.
 - [ ] Release training code.
 
 
