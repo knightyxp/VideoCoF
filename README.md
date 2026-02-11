@@ -9,7 +9,7 @@
   </h4>
 
   <h4 style="margin: 15px 0; color: #2c3e50;">
-    🚀 A Chain of Frames video editing method enbale temporal reasoning and 4x video length extrapolation with just 50k training pairs!
+    🚀 A Chain of Frames video editing method enbale temporal reasoning and 16x video length extrapolation with just 50k training pairs!
   </h4>
 
   <!-- [![Hugging Face Daily Paper](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Daily%20Paper-yellow)](https://huggingface.co/papers/2512.07469) -->
@@ -40,10 +40,22 @@
 
 https://github.com/user-attachments/assets/26f7d347-3d6c-43cf-9645-6eb5906f6ad6
 
+## 🎬 Revisiting Video Editing Length Extrapolation
+
+Although VideoCoF is trained on only **33 frames**, it generalizes remarkably to much longer videos — achieving **16× single-shot editing (512 frames)** and **14× multi-shot editing (415 frames)**. Check out the videos below and try VideoCoF on your own long videos!
+
+**Multi-shot editing (14×, 415 frames):**
+
+https://github.com/user-attachments/assets/22101cf3-d267-4bc4-834d-a4fb194efe92
+
+**Single-shot editing (16×, 512 frames):**
+
+https://github.com/user-attachments/assets/21fc04a5-c6e3-4864-abb5-070c5f44ee88
+
 ## 🔥 News
 
 - **2026.01.02**: 📚 We released the full **VideoCoF-50k** training dataset! Check it out at [Hugging Face Datasets](https://huggingface.co/datasets/XiangpengYang/VideoCoF-50k).
-- **2025.12.13**: 🚀 We released a **4-step fast inference script** (~20-30s per video) and launched the Hugging Face demo! Please try it at [Hugging Face Spaces](https://huggingface.co/spaces/XiangpengYang/VideoCoF).
+- **2025.12.13**: 🚀 We released a **4-step fast inference script** (10s per video on H100) and launched the Hugging Face demo! Please try it at [Hugging Face Spaces](https://huggingface.co/spaces/XiangpengYang/VideoCoF).
 - **2025.12.09**: Paper available on arXiv.
 - **2025.12.08**: Release the inference code and videocof-50k weight.
 - **2025.12.06**: 🔥 Project Page and README updated!
@@ -51,6 +63,7 @@ https://github.com/user-attachments/assets/26f7d347-3d6c-43cf-9645-6eb5906f6ad6
 
 ## 📑 Table of Contents
 
+- [🎬 Revisiting Video Editing Length Extrapolation](#-revisiting-video-editing-length-extrapolation)
 - [🔧 Quick Start](#-quick-start)
 - [🏆 Model Zoo](#-model-zoo)
 - [🍭 Results](#-results)
@@ -121,7 +134,7 @@ https://github.com/user-attachments/assets/26f7d347-3d6c-43cf-9645-6eb5906f6ad6
 
 4.  **Inference:**
 
-    🚀We provide **Fast 4-step inference** (Default, ~30s/video on H100) using acceleration LoRA.
+    🚀We provide **Fast 4-step inference** (Default, ~10s/video on H100) using DMD LoRA.
 
     For single inference tasks:
 
@@ -154,7 +167,7 @@ https://github.com/user-attachments/assets/26f7d347-3d6c-43cf-9645-6eb5906f6ad6
     python examples/app.py
     ```
     
-    The demo supports fast inference (~30s per video) online.
+    The demo supports fast inference (~10s per video) online.
 
 ## 🏆 Model Zoo
 
@@ -194,7 +207,7 @@ Current video editing methods typically follow two paths:
 
 - [x] Release paper.
 - [x] Release inference code and weights.
-- [x] Release Hugging Face demo (~30s infer a video online), try it at [Hugging Face Spaces](https://huggingface.co/spaces/XiangpengYang/VideoCoF).
+- [x] Release Hugging Face demo (~10s infer a video online), try it at [Hugging Face Spaces](https://huggingface.co/spaces/XiangpengYang/VideoCoF).
 - [x] Release videocof-50k training data.
 - [ ] Release training code.
 

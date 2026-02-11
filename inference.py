@@ -97,7 +97,7 @@ def parse_args():
 
 
 # Defaults aligned with predict_v2v_json_new.py
-GPU_memory_mode = "sequential_cpu_offload"
+GPU_memory_mode = "model_full_load"
 ulysses_degree = 1
 ring_degree = 1
 fsdp_dit = False
