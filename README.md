@@ -44,7 +44,7 @@ https://github.com/user-attachments/assets/26f7d347-3d6c-43cf-9645-6eb5906f6ad6
 
 Although VideoCoF is trained on only **33 frames**, it generalizes remarkably to much longer videos — achieving **16× single-shot editing (512 frames)** and **14× multi-shot editing (415 frames)**. Check out the videos below and try VideoCoF on your own long videos!
 
-**Multi-shot editing (14×, 415 frames):**
+**Multi-shot editing (14×, 415 frames):** (source video credit by [StoryMem](https://github.com/Kevin-thu/StoryMem))
 
 https://github.com/user-attachments/assets/22101cf3-d267-4bc4-834d-a4fb194efe92
 
