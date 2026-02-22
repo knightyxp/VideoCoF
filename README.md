@@ -54,6 +54,7 @@ https://github.com/user-attachments/assets/21fc04a5-c6e3-4864-abb5-070c5f44ee88
 
 ## 🔥 News
 
+- **2026.02.22**: 🎉 VideoCoF was accepted to **CVPR 2026**!
 - **2026.01.02**: 📚 We released the full **VideoCoF-50k** training dataset! Check it out at [Hugging Face Datasets](https://huggingface.co/datasets/XiangpengYang/VideoCoF-50k).
 - **2025.12.13**: 🚀 We released a **4-step fast inference script** (10s per video on H100) and launched the Hugging Face demo! Please try it at [Hugging Face Spaces](https://huggingface.co/spaces/XiangpengYang/VideoCoF).
 - **2025.12.09**: Paper available on arXiv.
