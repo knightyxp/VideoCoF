@@ -1,12 +1,9 @@
 <div align="center">
 
   <h1 style="margin: 0; font-size: 2.4em;">
+    CVPR 2026 🏆 Highlight<br>
     VideoCoF: Unified Video Editing with Temporal Reasoner
   </h1>
-
-  <h3 style="margin: 8px 0; color: #c0392b;">
-    CVPR 2026 🏆 Highlight
-  </h3>
 
   <h4 style="margin: 15px 0; color: #2c3e50;">
     👁️ See &rarr; 🧠 Reason &rarr; ✏️ Edit
