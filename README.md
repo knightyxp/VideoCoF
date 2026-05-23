@@ -54,6 +54,7 @@ https://github.com/user-attachments/assets/21fc04a5-c6e3-4864-abb5-070c5f44ee88
 
 ## 🔥 News
 
+- **2026.05.23**: 🎉 We released the VideoCoF training code.
 - **2026.02.22**: 🎉 VideoCoF was accepted to **CVPR 2026**!
 - **2026.01.02**: 📚 We released the full **VideoCoF-50k** training dataset! Check it out at [Hugging Face Datasets](https://huggingface.co/datasets/XiangpengYang/VideoCoF-50k).
 - **2025.12.13**: 🚀 We released a **4-step fast inference script** (10s per video on H100) and launched the Hugging Face demo! Please try it at [Hugging Face Spaces](https://huggingface.co/spaces/XiangpengYang/VideoCoF).
@@ -66,6 +67,7 @@ https://github.com/user-attachments/assets/21fc04a5-c6e3-4864-abb5-070c5f44ee88
 
 - [🎬 Revisiting Video Editing Length Extrapolation](#-revisiting-video-editing-length-extrapolation)
 - [🔧 Quick Start](#-quick-start)
+- [🏋️ Training](#-training)
 - [🏆 Model Zoo](#-model-zoo)
 - [🍭 Results](#-results)
 - [🚧 TODO](#-todo)
@@ -170,6 +172,29 @@ https://github.com/user-attachments/assets/21fc04a5-c6e3-4864-abb5-070c5f44ee88
     
     The demo supports fast inference (~10s per video) online.
 
+## 🏋️ Training
+
+We provide the Wan2.1 CoT LoRA training code used for VideoCoF under `scripts/wan2.1`.
+
+Train VideoCoF CoT LoRA:
+
+```bash
+export MODEL_NAME=/path/to/Wan2.1-T2V-14B
+export DATASET_NAME=/path/to/VideoCoF-50k
+export DATASET_META_NAME=/path/to/VideoCoF-50k/train.json
+export OUTPUT_DIR=experiments/videocof_wan2.1_14b_lora
+
+bash scripts/wan2.1/train_joint_img_cot_video_lora.sh
+```
+
+Evaluate ultra-long videos with DMD LoRA:
+
+```bash
+bash scripts/test/test_cot_lora.sh
+```
+
+See `scripts/wan2.1/README_TRAIN_VIDEOCOF.md` for the expected metadata format and training notes.
+
 ## 🏆 Model Zoo
 
 Our models are available on Hugging Face:
@@ -210,7 +235,7 @@ Current video editing methods typically follow two paths:
 - [x] Release inference code and weights.
 - [x] Release Hugging Face demo (~10s infer a video online), try it at [Hugging Face Spaces](https://huggingface.co/spaces/XiangpengYang/VideoCoF).
 - [x] Release videocof-50k training data.
-- [ ] Release training code.
+- [x] Release training code.
 
 
 ## 🙏 Acknowledgments

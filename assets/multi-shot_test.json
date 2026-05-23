@@ -1,0 +1,8 @@
+[
+    {
+      "task_type": "multi-shot_extrapo",
+      "sample_id": "001",
+      "source_video_path": "assets/daiyu_529frames.mp4",
+      "qwen_vl_72b_refined_instruction": "Replace the woman’s light green hanfu dress with a deep navy silk hanfu robe embroidered with subtle silver cloud patterns, paired with an ivory inner collar and a dark teal sash."
+    }
+]

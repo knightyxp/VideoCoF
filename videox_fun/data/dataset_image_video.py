@@ -1183,6 +1183,7 @@ class ImageVideoCoTDataset(Dataset):
         enable_gray_red_mask=False,
         enable_gray_black_background=False,
         enable_gray_alpha_overlay=False,
+        enable_gray_bounding_box=False,
         gray_alpha=0.5,
         gray_intensity_range=(96, 160),
         gray_tolerance=12,
@@ -1251,12 +1252,13 @@ class ImageVideoCoTDataset(Dataset):
         self.enable_inpaint = enable_inpaint
         self.enable_gradual_ground = enable_gradual_ground
         # only one visualization mode at a time
-        enabled_modes = int(bool(enable_gray_red_mask)) + int(bool(enable_gray_black_background)) + int(bool(enable_gray_alpha_overlay))
+        enabled_modes = int(bool(enable_gray_red_mask)) + int(bool(enable_gray_black_background)) + int(bool(enable_gray_alpha_overlay)) + int(bool(enable_gray_bounding_box))
         if enabled_modes > 1:
-            raise ValueError("enable_gray_red_mask, enable_gray_black_background and enable_gray_alpha_overlay cannot be enabled simultaneously.")
+            raise ValueError("enable_gray_red_mask, enable_gray_black_background, enable_gray_alpha_overlay and enable_gray_bounding_box cannot be enabled simultaneously.")
         self.enable_gray_red_mask = enable_gray_red_mask
         self.enable_gray_black_background = enable_gray_black_background
         self.enable_gray_alpha_overlay = enable_gray_alpha_overlay
+        self.enable_gray_bounding_box = enable_gray_bounding_box
         self.gray_alpha = float(gray_alpha)
         if not (0.0 <= self.gray_alpha <= 1.0):
             raise ValueError("gray_alpha must be in [0,1].")
@@ -1414,6 +1416,72 @@ class ImageVideoCoTDataset(Dataset):
                 out[i] = f.astype(src.dtype)
         return out
 
+    def _apply_gray_bounding_box_effect(self, src_frames_np: np.ndarray, ref_frames_np: np.ndarray,
+                                        alpha: float = 0.5, gray_value: float = 0.5, num_frames: int = 4) -> np.ndarray:
+        """
+        Detect gray regions on ref frames, find their bounding box, and apply a gradient
+        gray overlay to the bounding box area on src frames.
+        """
+        n = min(int(num_frames), int(src_frames_np.shape[0]), int(ref_frames_np.shape[0]))
+        if n <= 0:
+            return src_frames_np
+        out = src_frames_np.copy()
+        a = float(alpha)
+        a = 0.0 if a < 0.0 else (1.0 if a > 1.0 else a)
+        gv = float(gray_value)
+        gv = 0.0 if gv < 0.0 else (1.0 if gv > 1.0 else gv)
+
+        for i in range(n):
+            mask = self._build_gray_mask(ref_frames_np[i])
+            if not np.any(mask):
+                continue
+
+            rows = np.any(mask, axis=1)
+            cols = np.any(mask, axis=0)
+            if not np.any(rows) or not np.any(cols):
+                continue
+            y_min, y_max = np.where(rows)[0][[0, -1]]
+            x_min, x_max = np.where(cols)[0][[0, -1]]
+            if y_max <= y_min or x_max <= x_min:
+                continue
+
+            src = out[i]
+            h, w = src.shape[:2]
+            if np.issubdtype(src.dtype, np.floating):
+                f = src.astype(np.float32)
+                if f.max() > 1.0:
+                    f = np.clip(f / 255.0, 0.0, 1.0)
+                back_to_uint8 = False
+            else:
+                f = src.astype(np.float32) / 255.0
+                back_to_uint8 = True
+
+            box_h = y_max - y_min + 1
+            box_w = x_max - x_min + 1
+            y_coords = np.arange(box_h).astype(np.float32)
+            x_coords = np.arange(box_w).astype(np.float32)
+            y_norm = (y_coords - box_h / 2) / (box_h / 2 + 1e-6)
+            x_norm = (x_coords - box_w / 2) / (box_w / 2 + 1e-6)
+            yy, xx = np.meshgrid(y_norm, x_norm, indexing='ij')
+            dist = np.sqrt(yy**2 + xx**2)
+            dist = np.clip(dist, 0, 1.414) / 1.414
+            gradient_alpha = a * (1.0 - 0.8 * dist)
+
+            gray_color = np.array([gv, gv, gv], dtype=np.float32)
+            for dy in range(box_h):
+                for dx in range(box_w):
+                    py = y_min + dy
+                    px = x_min + dx
+                    if 0 <= py < h and 0 <= px < w:
+                        local_alpha = gradient_alpha[dy, dx]
+                        f[py, px] = (1.0 - local_alpha) * f[py, px] + local_alpha * gray_color
+
+            if back_to_uint8:
+                out[i] = (f * 255.0).clip(0, 255).astype(src.dtype)
+            else:
+                out[i] = f.astype(src.dtype)
+        return out
+
     def get_batch(self, idx):
         data_info = self.dataset[idx % len(self.dataset)]
         data_type = data_info.get('type', 'video')
@@ -1544,6 +1612,10 @@ class ImageVideoCoTDataset(Dataset):
                     ground_frames = self._apply_gray_overlay_from_reference(
                         src_frames, ground_frames, alpha=self.gray_alpha, gray_value=0.5, num_frames=4
                     )
+                elif self.enable_gray_bounding_box:
+                    ground_frames = self._apply_gray_bounding_box_effect(
+                        src_frames, ground_frames, alpha=self.gray_alpha, gray_value=0.5, num_frames=self.reasoning_frames
+                    )
 
                 if not self.enable_bucket:
                     src_tensor = torch.from_numpy(src_frames).permute(0, 3, 1, 2).contiguous() / 255.
@@ -1645,6 +1717,206 @@ class ImageVideoCoTDataset(Dataset):
                     break
             except Exception as e:
                 print(e, self.dataset[idx % len(self.dataset)])
+                idx = random.randint(0, self.length-1)
+
+        return sample
+
+class NHREditDataset(Dataset):
+    """
+    Dataset for NHR-Edit image editing annotations, compatible with the paired
+    image branch used by train_joint_img_video_lora.py.
+    """
+    def __init__(
+        self,
+        ann_path,
+        data_root=None,
+        video_sample_size=512,
+        source_frames=1,
+        target_frames=1,
+        text_drop_ratio=0.1,
+        enable_bucket=False,
+        enable_inpaint=False,
+        video_length_drop_start=0.0,
+        video_length_drop_end=1.0,
+        instruction_template="A video sequence showing three parts: first the original scene, then grounded {ground_instruction}, and finally the same scene but {edit_instruction}",
+    ):
+        self.data_root = data_root
+
+        if ann_path.endswith('.parquet'):
+            try:
+                import pandas as pd
+            except ImportError as exc:
+                raise ImportError("Please install pandas and pyarrow to use Parquet datasets.") from exc
+
+            df = pd.read_parquet(ann_path, engine='pyarrow')
+            dataset = df.to_dict('records')
+            for entry in dataset:
+                entry['type'] = 'image'
+                entry['original_image'] = entry.get('source_image')
+                entry['edited_image'] = entry.get('edited_image')
+                text = entry.get('edit_instruction', entry.get('instruction', ""))
+                if text is None:
+                    text = ""
+                entry['text'] = text
+                entry['file_path'] = str(entry.get('sample_id', 'parquet_entry'))
+        else:
+            dataset = json.load(open(ann_path))
+            if isinstance(dataset, dict):
+                iterable = dataset.values()
+            elif isinstance(dataset, list):
+                iterable = dataset
+            else:
+                raise ValueError(f"Unsupported annotation format: {type(dataset)}")
+
+            new_dataset = []
+            for info in iterable:
+                data_type = info.get("type", "image")
+                entry = dict(info)
+                entry["type"] = data_type
+
+                if "edit_instruction" in entry:
+                    entry["text"] = entry["edit_instruction"]
+                elif "instruction" in entry:
+                    entry["text"] = entry["instruction"]
+                elif "text" not in entry:
+                    entry["text"] = ""
+
+                if entry["text"] is None:
+                    entry["text"] = ""
+
+                if data_type == "video":
+                    entry["file_path"] = entry.get("original_video", "")
+                else:
+                    entry["file_path"] = entry.get("original_image") or entry.get("parquet_path", "")
+
+                new_dataset.append(entry)
+            dataset = new_dataset
+
+        self.dataset = dataset
+        self.length = len(self.dataset)
+        self.source_frames = source_frames
+        self.target_frames = target_frames
+        self.video_length_drop_start = video_length_drop_start
+        self.video_length_drop_end = video_length_drop_end
+
+        self.video_sample_size = tuple(video_sample_size) if not isinstance(video_sample_size, int) else (video_sample_size, video_sample_size)
+        self.video_transforms = transforms.Compose([
+            transforms.Resize(min(self.video_sample_size)),
+            transforms.CenterCrop(self.video_sample_size),
+            transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5], inplace=True),
+        ])
+        self.image_transforms = transforms.Compose([
+            transforms.Resize(min(self.video_sample_size)),
+            transforms.CenterCrop(self.video_sample_size),
+            transforms.ToTensor(),
+            transforms.Normalize([0.5, 0.5, 0.5],[0.5, 0.5, 0.5])
+        ])
+
+        self.instruction_template = instruction_template
+        self.enable_bucket = enable_bucket
+        self.text_drop_ratio = text_drop_ratio
+        self.enable_inpaint = enable_inpaint
+        self.larger_side_of_image_and_video = min(self.video_sample_size)
+
+    def load_image(self, img_data):
+        if isinstance(img_data, dict) and 'bytes' in img_data:
+            return Image.open(io.BytesIO(img_data['bytes'])).convert('RGB')
+        if isinstance(img_data, str):
+            if self.data_root is not None and not os.path.isabs(img_data):
+                path = os.path.join(self.data_root, img_data)
+            else:
+                path = img_data
+            return Image.open(path).convert('RGB')
+        raise ValueError(f"Unknown image data type: {type(img_data)}")
+
+    def get_batch(self, idx):
+        data_info = self.dataset[idx % len(self.dataset)]
+        data_type = data_info.get('type', 'image')
+
+        raw_text = data_info.get('text', '')
+        if raw_text is None or (isinstance(raw_text, str) and not raw_text.strip()):
+            raw_text = "the content has been modified"
+
+        if data_type == 'image':
+            src_data = data_info.get('original_image')
+            tgt_data = data_info.get('edited_image')
+
+            if (src_data is None or tgt_data is None) and 'parquet_path' in data_info:
+                try:
+                    import pandas as pd
+
+                    pq_path = data_info['parquet_path']
+                    sid = data_info.get('sample_id')
+                    if sid is not None:
+                        df = pd.read_parquet(
+                            pq_path,
+                            filters=[('sample_id', '=', sid)],
+                            columns=['source_image', 'edited_image'],
+                            engine='pyarrow',
+                        )
+                        if not df.empty:
+                            row = df.iloc[0]
+                            if src_data is None:
+                                src_data = row['source_image']
+                            if tgt_data is None:
+                                tgt_data = row['edited_image']
+                except Exception as e:
+                    print(f"Failed to load from parquet {data_info.get('parquet_path')}: {e}")
+
+            if src_data is None or tgt_data is None:
+                raise ValueError(f'Missing original_image/edited_image for sample_id={data_info.get("sample_id")}')
+
+            src_img = self.load_image(src_data)
+            tgt_img = self.load_image(tgt_data)
+
+            if not self.enable_bucket:
+                src_tensor = self.image_transforms(src_img).unsqueeze(0)
+                tgt_tensor = self.image_transforms(tgt_img).unsqueeze(0)
+            else:
+                src_tensor = np.expand_dims(np.array(src_img), axis=0)
+                tgt_tensor = np.expand_dims(np.array(tgt_img), axis=0)
+
+            ground_instr = derive_ground_object_from_instruction(raw_text)
+            if self.instruction_template and "{edit_instruction}" in self.instruction_template:
+                try:
+                    text = self.instruction_template.format(edit_instruction=raw_text, ground_instruction=ground_instr)
+                except KeyError:
+                    text = raw_text
+            else:
+                text = raw_text
+
+            if random.random() < self.text_drop_ratio:
+                text = ''
+
+            return src_tensor, None, tgt_tensor, text, 'image'
+
+        raise NotImplementedError("NHREditDataset currently only supports image data (type='image').")
+
+    def __len__(self):
+        return self.length
+
+    def __getitem__(self, idx):
+        data_info = self.dataset[idx % len(self.dataset)]
+        data_type = data_info.get('type', 'image')
+        while True:
+            sample = {}
+            try:
+                data_info_local = self.dataset[idx % len(self.dataset)]
+                data_type_local = data_info_local.get('type', 'image')
+                if data_type_local != data_type:
+                    raise ValueError("data_type_local != data_type")
+
+                src_vals, _, tgt_vals, name, data_type = self.get_batch(idx)
+                sample["pixel_values_src_image"] = src_vals
+                sample["pixel_values_tgt_image"] = tgt_vals
+                sample["text"] = name
+                sample["data_type"] = data_type
+                sample["idx"] = idx
+
+                if len(sample) > 0:
+                    break
+            except Exception as e:
+                print(f"Error loading sample {idx}: {e}")
                 idx = random.randint(0, self.length-1)
 
         return sample
