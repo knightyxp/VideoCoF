@@ -68,6 +68,7 @@ https://github.com/user-attachments/assets/21fc04a5-c6e3-4864-abb5-070c5f44ee88
 - [🎬 Revisiting Video Editing Length Extrapolation](#-revisiting-video-editing-length-extrapolation)
 - [🔧 Quick Start](#-quick-start)
 - [🏋️ Training](#-training)
+- [🚀 Inference](#-inference)
 - [🏆 Model Zoo](#-model-zoo)
 - [🍭 Results](#-results)
 - [🚧 TODO](#-todo)
@@ -135,43 +136,6 @@ https://github.com/user-attachments/assets/21fc04a5-c6e3-4864-abb5-070c5f44ee88
         wget -P videocof_weight https://huggingface.co/MonsterMMORPG/Wan_GGUF/resolve/main/Wan2.1_Text_to_Video_14B_FusionX_LoRA.safetensors
         ```
 
-4.  **Inference:**
-
-    🚀We provide **Fast 4-step inference** (Default, ~10s/video on H100) using DMD LoRA.
-
-    For single inference tasks:
-
-    ```bash
-    # Object Removal
-    sh scripts/obj_rem.sh
-
-    # Object Addition
-    sh scripts/obj_add.sh
-
-    # Object Swap
-    sh scripts/obj_swap.sh
-
-    # Local Style Transfer
-    sh scripts/local_style.sh
-    ```
-
-    For parallel inference:
-
-    ```bash
-    sh scripts/parallel_infer.sh
-    ```
-
-5.  **Gradio Demo:**
-
-    Launch the Gradio interface for interactive testing:
-
-    ```bash
-    # Ensure Wan2.1-T2V-14B (model_name), videocof_weight and dmd lora are in the current directory or properly referenced
-    python examples/app.py
-    ```
-    
-    The demo supports fast inference (~10s per video) online.
-
 ## 🏋️ Training
 
 We provide the Wan2.1 CoT LoRA training code used for VideoCoF under `scripts/wan2.1`.
@@ -193,7 +157,46 @@ Evaluate ultra-long videos with DMD LoRA:
 bash scripts/test/test_cot_lora.sh
 ```
 
+You can test 513-frame video editing results online with 4-step editing. The demo runs under 60GB GPU memory without OOM.
+
 See `scripts/wan2.1/README_TRAIN_VIDEOCOF.md` for the expected metadata format and training notes.
+
+## 🚀 Inference
+
+🚀We provide **Fast 4-step inference** (Default, ~10s/video on H100) using DMD LoRA.
+
+For single inference tasks:
+
+```bash
+# Object Removal
+sh scripts/obj_rem.sh
+
+# Object Addition
+sh scripts/obj_add.sh
+
+# Object Swap
+sh scripts/obj_swap.sh
+
+# Local Style Transfer
+sh scripts/local_style.sh
+```
+
+For parallel inference:
+
+```bash
+sh scripts/parallel_infer.sh
+```
+
+### Gradio Demo
+
+Launch the Gradio interface for interactive testing:
+
+```bash
+# Ensure Wan2.1-T2V-14B (model_name), videocof_weight and dmd lora are in the current directory or properly referenced
+python examples/app.py
+```
+
+The demo supports fast inference (~10s per video) online.
 
 ## 🏆 Model Zoo
 
