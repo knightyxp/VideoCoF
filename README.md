@@ -1,8 +1,12 @@
 <div align="center">
 
   <h1 style="margin: 0; font-size: 2.4em;">
-    Unified Video Editing with Temporal Reasoner
+    VideoCoF: Unified Video Editing with Temporal Reasoner
   </h1>
+
+  <h3 style="margin: 8px 0; color: #c0392b;">
+    CVPR 2026 🏆 Highlight
+  </h3>
 
   <h4 style="margin: 15px 0; color: #2c3e50;">
     👁️ See &rarr; 🧠 Reason &rarr; ✏️ Edit
@@ -55,6 +59,7 @@ https://github.com/user-attachments/assets/21fc04a5-c6e3-4864-abb5-070c5f44ee88
 ## 🔥 News
 
 - **2026.05.23**: 🎉 We released the VideoCoF training code.
+- **2026.04.09**: 🏆 VideoCoF was honored as a **CVPR 2026 Highlight**.
 - **2026.02.22**: 🎉 VideoCoF was accepted to **CVPR 2026**!
 - **2026.01.02**: 📚 We released the full **VideoCoF-50k** training dataset! Check it out at [Hugging Face Datasets](https://huggingface.co/datasets/XiangpengYang/VideoCoF-50k).
 - **2025.12.13**: 🚀 We released a **4-step fast inference script** (10s per video on H100) and launched the Hugging Face demo! Please try it at [Hugging Face Spaces](https://huggingface.co/spaces/XiangpengYang/VideoCoF).
