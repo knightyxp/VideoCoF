@@ -2,14 +2,8 @@ import importlib.util
 
 from diffusers import AutoencoderKL
 from transformers import (AutoTokenizer, CLIPImageProcessor, CLIPTextModel,
-                          CLIPTokenizer, CLIPVisionModelWithProjection,
-                          T5EncoderModel, T5Tokenizer, T5TokenizerFast)
-
-try:
-    from transformers import Qwen2_5_VLForConditionalGeneration, Qwen2Tokenizer
-except:
-    Qwen2_5_VLForConditionalGeneration, Qwen2Tokenizer = None, None
-    print("Your transformers version is too old to load Qwen2_5_VLForConditionalGeneration and Qwen2Tokenizer. If you wish to use QwenImage, please upgrade your transformers package to the latest version.")
+                         CLIPTokenizer, CLIPVisionModelWithProjection,
+                         T5EncoderModel, T5Tokenizer, T5TokenizerFast)
 
 # from .wan_audio_encoder import WanAudioEncoder
 from .wan_image_encoder import CLIPModel
