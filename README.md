@@ -69,6 +69,7 @@ https://github.com/user-attachments/assets/21fc04a5-c6e3-4864-abb5-070c5f44ee88
 
 - [🎬 Revisiting Video Editing Length Extrapolation](#-revisiting-video-editing-length-extrapolation)
 - [🔧 Quick Start](#-quick-start)
+- [🗂 Repository Layout](#-repository-layout)
 - [🏋️ Training](#-training)
 - [🚀 Inference](#-inference)
 - [🏆 Model Zoo](#-model-zoo)
@@ -138,11 +139,34 @@ https://github.com/user-attachments/assets/21fc04a5-c6e3-4864-abb5-070c5f44ee88
         wget -P videocof_weight https://huggingface.co/MonsterMMORPG/Wan_GGUF/resolve/main/Wan2.1_Text_to_Video_14B_FusionX_LoRA.safetensors
         ```
 
+## 🗂 Repository Layout
+
+The repo has two core code paths: **training** (`scripts/wan2.1`) and **inference** (`fast_infer.py` + scripts).
+
+```bash
+VideoCoF/
+├─ fast_infer.py                 # Core 4-step inference engine
+├─ examples/
+│  ├─ app.py                     # Gradio quick demo
+│  └─ wan2.1/                    # JSON-based CoT inference helpers
+├─ scripts/
+│  ├─ local_style.sh
+│  ├─ obj_add.sh
+│  ├─ obj_rem.sh
+│  ├─ obj_swap.sh
+│  ├─ parallel_infer.sh          # 4 GPUs fast batch entry for fast_infer.py
+│  ├─ evaluation/                # Evaluation helper scripts
+│  ├─ test/                      # Legacy command snippets (main test now uses wan2.1/test_cot_lora.sh)
+│  └─ wan2.1/                   # All maintained training/inference entry scripts
+├─ videox_fun/                  # Core models, pipeline and utils used by Wan2.1 training/inference
+└─ config/                      # Deepspeed and model configs
+```
+
 ## 🏋️ Training
 
-We provide the Wan2.1 CoT LoRA training code used for VideoCoF under `scripts/wan2.1`.
+We keep the training code in `scripts/wan2.1` with two main entry paths:
 
-Train VideoCoF CoT LoRA:
+1) 14B VideoCoF CoT LoRA (recommended for full reproduction):
 
 ```bash
 export MODEL_NAME=/path/to/Wan2.1-T2V-14B
@@ -153,15 +177,36 @@ export OUTPUT_DIR=experiments/videocof_wan2.1_14b_lora
 bash scripts/wan2.1/train_joint_img_cot_video_lora.sh
 ```
 
-Evaluate ultra-long videos with DMD LoRA:
+2) 1.3B training (current lightweight entry kept):
 
 ```bash
-bash scripts/test/test_cot_lora.sh
+export MODEL_NAME=/path/to/Wan2.1-T2V-1.3B
+export DATASET_NAME=/path/to/VideoCoF-50k
+export DATASET_META_NAME=/path/to/VideoCoF-50k/train.json
+export OUTPUT_DIR=experiments/videocof_wan2.1_1.3b_lora
+
+# Use train_1.3b.sh (accelerate launch around train_lora.py)
+bash scripts/wan2.1/train_1.3b.sh
+
+# Or use train_joint_img_video_lora.sh for image-video joint dataset mode
+# (also 1.3B default)
+bash scripts/wan2.1/train_joint_img_video_lora.sh
 ```
 
-You can test 513-frame video editing results online with 4-step editing. The demo runs under 60GB GPU memory without OOM.
+Validate during and after training:
 
-See `scripts/wan2.1/README_TRAIN_VIDEOCOF.md` for the expected metadata format and training notes.
+Validation runs inside the training scripts (`train_lora.py` and
+`train_joint_img_video_lora.py`), not as a standalone command.
+
+Evaluate ultra-long videos with 4-step DMD inference:
+
+```bash
+bash scripts/wan2.1/test_cot_lora.sh
+```
+
+You can test 513-frame video editing results online with 4-step inference. The demo runs under 60GB GPU memory without OOM.
+
+See `scripts/wan2.1/README_TRAIN_VIDEOCOF.md` for dataset format and training notes.
 
 ## 🚀 Inference
 
@@ -188,6 +233,9 @@ For parallel inference:
 ```bash
 sh scripts/parallel_infer.sh
 ```
+
+Note:
+- `scripts/test` keeps historical snippets; the maintained single/multi-task inference flow uses the above files under root and `scripts/wan2.1`.
 
 ### Gradio Demo
 
