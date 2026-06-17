@@ -69,7 +69,7 @@ def load_video_frames(video_path: str, source_frames: int):
         reader = imageio.get_reader(video_path)
 
     stride = max(1, total_frames // source_frames)
-    # Using random start frame as in inference.py
+    # Using random start frame as in fast_infer.py
     start_frame = torch.randint(0, max(1, total_frames - stride * source_frames), (1,))[0].item()
 
     frames = []
@@ -376,7 +376,7 @@ def ui(GPU_memory_mode, scheduler_dict, config_path, compile_dit, weight_dtype):
                 controller, visible=False, default_lora=videocof_lora_path
             )
             
-            # Set default LoRA alpha to 1.0 (matching inference.py)
+            # Set default LoRA alpha to 1.0 (matching fast_infer.py)
             lora_alpha_slider.value = 1.0
 
         # Preload heavy weights and LoRAs before launching the UI to avoid first-run latency.

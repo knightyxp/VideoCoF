@@ -5,9 +5,11 @@ It intentionally does not include the older test/inference scripts from VideoX-F
 
 ## Files
 
-- `train_joint_img_video_lora.py`: LoRA training entry for paired video/image editing and CoT triplets.
+- `train_joint_img_video_lora.py`: common python launcher for 14B/1.3B joint dataset training.
 - `validation.py`: optional prompt and final DDP validation helpers used by the training entry.
-- `train_joint_img_cot_video_lora.sh`: public launch script for VideoCoF-50k style CoT training.
+- `train_joint_img_cot_video_lora.sh`: 14B launch script for VideoCoF-50k style CoT training.
+- `train_1.3b.sh`: 1.3B launch script for training with `train_lora.py`.
+- `train_lora.py`: 1.3B training implementation.
 - `slurm_video_gradual_cot_14b.sh`: Slurm 16-GPU example for 14B gradual CoT LoRA training.
 - `test_cot_lora.sh`: `torchrun` parallel test wrapper for CoT LoRA inference.
 - `../../examples/wan2.1/predict_v2v_cot_json.py`: 50-step parallel CoT inference from a JSON task list.
@@ -31,7 +33,9 @@ It intentionally does not include the older test/inference scripts from VideoX-F
 
 ## Launch
 
-Set paths through environment variables so local machine paths do not need to be edited into the script:
+Set paths through environment variables so local machine paths do not need to be edited into the script.
+
+### 14B CoT entry (recommended for VideoCoF-50k)
 
 ```bash
 export MODEL_NAME=/path/to/Wan2.1-T2V-14B
@@ -42,7 +46,18 @@ export OUTPUT_DIR=experiments/videocof_wan2.1_14b_lora
 bash scripts/wan2.1/train_joint_img_cot_video_lora.sh
 ```
 
-The default command trains a rank-128 LoRA with DeepSpeed ZeRO-2 bf16 config in `config/14b_lora_zero2_bf16_config.json`.
+### 1.3B entry
+
+```bash
+export MODEL_NAME=/path/to/Wan2.1-T2V-1.3B
+export DATASET_NAME=/path/to/VideoCoF-50k
+export DATASET_META_NAME=/path/to/VideoCoF-50k/train.json
+export OUTPUT_DIR=experiments/videocof_wan2.1_1.3b_lora
+
+bash scripts/wan2.1/train_1.3b.sh
+```
+
+For 14B (`train_joint_img_cot_video_lora.sh`), the default command trains a rank-128 LoRA with DeepSpeed ZeRO-2 bf16 config in `config/14b_lora_zero2_bf16_config.json`.
 Install `deepspeed` separately if you use the default launch script. Parquet-based NHR image data additionally requires `pandas` and `pyarrow`.
 
 For Slurm clusters, edit the `#SBATCH --account` line and export the same path variables before submitting:

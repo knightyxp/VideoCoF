@@ -14,7 +14,7 @@ torchrun --nproc_per_node=4 fast_infer.py \
   --repeat_rope
 
 # ## for normal inference
-# torchrun --nproc_per_node=4 inference.py \
+# torchrun --nproc_per_node=4 fast_infer.py \
 #   --test_json assets/teaser_test.json \
 #   --output_dir results/parallel_infer \
 #   --model_name /scratch3/yan204/models/Wan2.1-T2V-14B \
