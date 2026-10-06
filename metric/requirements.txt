@@ -1,0 +1,8 @@
+# Install PyTorch/torchvision for your CUDA version first (see the root README).
+git+https://github.com/openai/CLIP.git
+numpy
+Pillow
+opencv-python
+imageio[ffmpeg]
+requests
+tqdm

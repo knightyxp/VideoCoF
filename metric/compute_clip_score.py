@@ -1,19 +1,66 @@
-import torch
-import clip
-from PIL import Image
+"""Historical VideoCoF CLIP/DINO metrics, with explicit evaluation provenance.
+
+CLIP-T is the model's scaled text-image logit (not an unscaled cosine).
+CLIP-F and DINO compare adjacent sampled frames of the edited video only.
+The historical sampler and score arithmetic are intentionally preserved.
+"""
 from glob import glob
-import numpy as np
 from collections import defaultdict
-# import openpyxl
+import sys
 
-from torchvision import transforms as tv_transforms
-from torchvision.transforms import InterpolationMode
+# Keep --help and manifest/path utilities usable without model dependencies.
+torch = clip = Image = np = imageio = tv_transforms = InterpolationMode = None
+device = None
+model = preprocess = None
+_CLIP_MODEL_NAME = "ViT-B/32"
+_CLIP_DOWNLOAD_ROOT = None
+_DINO_REPO = "facebookresearch/dinov2"
+_DINO_PREPROCESSING = {}
 
-device = "cuda" if torch.cuda.is_available() else "cpu"
-model, preprocess = clip.load("ViT-B/32", device=device)
+
+def _load_video_dependencies():
+    global Image, imageio
+    if Image is None:
+        from PIL import Image as pil_image
+        Image = pil_image
+    if imageio is None:
+        import imageio as imageio_module
+        imageio = imageio_module
+
+
+def _load_runtime_dependencies():
+    global torch, clip, np, tv_transforms, InterpolationMode, device
+    if torch is None:
+        import torch as torch_module
+        torch = torch_module
+    if clip is None:
+        import clip as clip_module
+        if not hasattr(clip_module, "load") or not hasattr(clip_module, "tokenize"):
+            raise ImportError("Install OpenAI CLIP, not the unrelated PyPI 'clip' package.")
+        clip = clip_module
+    if np is None:
+        import numpy as numpy_module
+        np = numpy_module
+    if tv_transforms is None:
+        from torchvision import transforms
+        from torchvision.transforms import InterpolationMode as interpolation_mode
+        tv_transforms, InterpolationMode = transforms, interpolation_mode
+    _load_video_dependencies()
+    if device is None:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+
+
+def _ensure_clip_loaded():
+    global model, preprocess
+    _load_runtime_dependencies()
+    if model is None:
+        model, preprocess = clip.load(
+            _CLIP_MODEL_NAME, device=device, download_root=_CLIP_DOWNLOAD_ROOT
+        )
 
 
 def crop_read_image_path(image_path):
+    _load_video_dependencies()
     origin_image = Image.open(image_path)
     w, h = origin_image.size
     if h > w:
@@ -22,6 +69,7 @@ def crop_read_image_path(image_path):
 
 
 def edit_success(image_path, source_prompt,target_prompt):
+    _ensure_clip_loaded()
     image = preprocess(crop_read_image_path(image_path)).unsqueeze(0).to(device)
 
     text = clip.tokenize([source_prompt, target_prompt]).to(device)
@@ -107,10 +155,9 @@ def folder_success(folder, source_prompt, target_prompt):
 import os
 import json
 import argparse
-import imageio
 from typing import List, Dict, Any, Optional, Tuple, Callable
 
-_DINO_COMPONENT_CACHE: Dict[Tuple[str, str], Tuple["torch.nn.Module", Callable[[Image.Image], torch.Tensor]]] = {}
+_DINO_COMPONENT_CACHE: Dict[Tuple[str, str], Tuple["torch.nn.Module", Callable[["Image.Image"], "torch.Tensor"]]] = {}
 
 # -----------------------------------------------------------------------------
 # Video path resolution and instruction extraction (aligned with gpt_evaluation)
@@ -213,17 +260,25 @@ def resolve_video_path(video_root: Optional[str], rel_path: str) -> Optional[str
     if not rp:
         return None
     rp = os.path.expanduser(rp)
-    if os.path.isabs(rp) and os.path.exists(rp):
-        return rp
+    if os.path.isabs(rp):
+        return rp if os.path.isfile(rp) else None
     if video_root:
-        candidate = os.path.join(video_root, rp.lstrip("./"))
-        if os.path.exists(candidate):
-            return candidate
-    if os.path.exists(rp):
+        candidate = os.path.join(video_root, rp)
+        if os.path.isfile(candidate):
+            return os.path.abspath(candidate)
+    if os.path.isfile(rp):
         return os.path.abspath(rp)
     return None
 
 def construct_paths_for_sample(sample: Dict[str, Any], original_root: str, edited_root: str, edited_pattern: str, force_compare_left: bool = False) -> Tuple[Optional[str], Optional[str], bool]:
+    explicit_edited = sample.get("edited_video_path")
+    explicit_original = sample.get("original_video_path") or sample.get("source_video_path") or sample.get("video")
+    if explicit_edited:
+        return (
+            resolve_video_path(original_root, explicit_original) if explicit_original else None,
+            resolve_video_path(edited_root, explicit_edited),
+            False,
+        )
     values = _build_pattern_values(sample)
     task_type = values.get("task_type") or values.get("task_type_lower") or ""
     sample_id = values.get("sample_id") or values.get("id") or ""
@@ -253,12 +308,16 @@ def construct_paths_for_sample(sample: Dict[str, Any], original_root: str, edite
     except KeyError:
         edited_rel = f"{base_name}.mp4"
     edited_path = resolve_video_path(edited_root, edited_rel)
+    if explicit_original:
+        original_path = resolve_video_path(original_root, explicit_original)
+        original_crop_left = False
     return (original_path, edited_path, original_crop_left)
 
 # -----------------------------------------------------------------------------
 # Frame extraction (PIL) aligned with gpt_evaluation spacing logic
 # -----------------------------------------------------------------------------
 def _get_video_length(video_path: str) -> Optional[int]:
+    _load_video_dependencies()
     try:
         reader = imageio.get_reader(video_path)
         try:
@@ -300,8 +359,9 @@ def _compute_evenly_spaced_indices(total_frames: Optional[int], num_frames: int)
             indices[i] = indices[i - 1]
     return indices
 
-def extract_frames_by_indices_pil(video_path: str, indices: List[int], crop_left_half: bool = False) -> List[Image.Image]:
-    frames: List[Image.Image] = []
+def extract_frames_by_indices_pil(video_path: str, indices: List[int], crop_left_half: bool = False) -> List["Image.Image"]:
+    _load_video_dependencies()
+    frames: List["Image.Image"] = []
     try:
         reader = imageio.get_reader(video_path)
         try:
@@ -329,7 +389,7 @@ def extract_frames_by_indices_pil(video_path: str, indices: List[int], crop_left
         pass
     return frames
 
-def extract_evenly_spaced_frames_pil(video_path: str, num_frames: int, crop_left_half: bool = False) -> List[Image.Image]:
+def extract_evenly_spaced_frames_pil(video_path: str, num_frames: int, crop_left_half: bool = False) -> List["Image.Image"]:
     if num_frames <= 0:
         return []
     total_frames = _get_video_length(video_path)
@@ -354,11 +414,16 @@ def extract_evenly_spaced_frames_pil(video_path: str, num_frames: int, crop_left
 # -----------------------------------------------------------------------------
 # Metric computation using CLIP (instruction as text)
 # -----------------------------------------------------------------------------
-def compute_clip_temporal_q(edited_video_path: str, instruction: str, frames_per_video: int) -> Tuple[Optional[float], Optional[float], Optional[float]]:
+def compute_clip_temporal_q(edited_video_path: str, instruction: str, frames_per_video: int, raise_on_error: bool = False, diagnostics: Optional[Dict[str, Any]] = None) -> Tuple[Optional[float], Optional[float], Optional[float]]:
     try:
+        _ensure_clip_loaded()
         frames = extract_evenly_spaced_frames_pil(edited_video_path, frames_per_video, crop_left_half=False)
+        if diagnostics is not None:
+            diagnostics["clip_decoded_frames"] = len(frames)
         if not frames:
-            return (None, None, None)
+            raise ValueError("No video frames could be decoded")
+        if len(frames) != frames_per_video:
+            print("Warning: decoded %d/%d requested frames: %s" % (len(frames), frames_per_video, edited_video_path), file=sys.stderr)
         text_tokens = clip.tokenize([instruction]).to(device)
         normalized_feature_list = []
         clip_t_logits_sum = None
@@ -389,13 +454,16 @@ def compute_clip_temporal_q(edited_video_path: str, instruction: str, frames_per
             clip_f_temporal_consistency.detach().cpu().numpy().item(),
             q_edit.detach().cpu().numpy().item(),
         )
-    except Exception:
+    except Exception as exc:
+        if raise_on_error:
+            raise
+        print("Warning: CLIP evaluation failed for %s: %s" % (edited_video_path, exc), file=sys.stderr)
         return (None, None, None)
 
 # -----------------------------------------------------------------------------
 # Frame-wise DINO consistency
 # -----------------------------------------------------------------------------
-def _resolve_torch_device(device_str: Optional[str]) -> torch.device:
+def _resolve_torch_device(device_str: Optional[str]) -> "torch.device":
     if device_str:
         try:
             return torch.device(device_str)
@@ -404,7 +472,7 @@ def _resolve_torch_device(device_str: Optional[str]) -> torch.device:
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-def _select_dino_transform(transforms_obj: Any) -> Callable[[Image.Image], torch.Tensor]:
+def _select_dino_transform(transforms_obj: Any) -> Callable[["Image.Image"], "torch.Tensor"]:
     if isinstance(transforms_obj, dict):
         for key in ("eval", "val", "test"):
             transform = transforms_obj.get(key)
@@ -433,7 +501,7 @@ def _resolve_default_dino_image_size(model_name: str) -> int:
     return 518
 
 
-def _build_default_dino_transform(model_name: str) -> Callable[[Image.Image], torch.Tensor]:
+def _build_default_dino_transform(model_name: str) -> Callable[["Image.Image"], "torch.Tensor"]:
     image_size = _resolve_default_dino_image_size(model_name)
     return tv_transforms.Compose(
         [
@@ -445,20 +513,21 @@ def _build_default_dino_transform(model_name: str) -> Callable[[Image.Image], to
     )
 
 
-def _get_dino_components(model_name: str, device_str: str) -> Tuple["torch.nn.Module", Callable[[Image.Image], torch.Tensor]]:
+def _get_dino_components(model_name: str, device_str: str) -> Tuple["torch.nn.Module", Callable[["Image.Image"], "torch.Tensor"]]:
+    _load_runtime_dependencies()
     target_device = _resolve_torch_device(device_str)
     cache_key = (model_name, str(target_device))
     if cache_key in _DINO_COMPONENT_CACHE:
         return _DINO_COMPONENT_CACHE[cache_key]
     try:
-        dino_model = torch.hub.load("facebookresearch/dinov2", model_name)
+        dino_model = torch.hub.load(_DINO_REPO, model_name)
     except Exception as exc:
         raise RuntimeError(f"Unable to load DINOv2 model '{model_name}': {exc}") from exc
     dino_model.eval()
     dino_model.to(target_device)
-    transform: Optional[Callable[[Image.Image], torch.Tensor]] = None
+    transform: Optional[Callable[["Image.Image"], "torch.Tensor"]] = None
     try:
-        dino_transforms = torch.hub.load("facebookresearch/dinov2", "dinov2_transforms")
+        dino_transforms = torch.hub.load(_DINO_REPO, "dinov2_transforms")
     except Exception as exc:
         print(f"Warning: unable to load DINOv2 transforms from torch.hub: {exc}. Falling back to default preprocessing.")
         dino_transforms = None
@@ -466,11 +535,12 @@ def _get_dino_components(model_name: str, device_str: str) -> Tuple["torch.nn.Mo
         transform = _select_dino_transform(dino_transforms)
     if not callable(transform):
         transform = _build_default_dino_transform(model_name)
+    _DINO_PREPROCESSING[model_name] = repr(transform)
     _DINO_COMPONENT_CACHE[cache_key] = (dino_model, transform)
     return _DINO_COMPONENT_CACHE[cache_key]
 
 
-def _extract_dino_feature_tensor(output: Any) -> Optional[torch.Tensor]:
+def _extract_dino_feature_tensor(output: Any) -> Optional["torch.Tensor"]:
     if isinstance(output, torch.Tensor):
         return output
     if isinstance(output, dict):
@@ -504,18 +574,26 @@ def compute_dino_temporal_consistency(
     num_frames: int,
     model_name: str,
     device_str: Optional[str] = None,
+    raise_on_error: bool = False,
+    diagnostics: Optional[Dict[str, Any]] = None,
 ) -> Optional[float]:
     target_num_frames = max(2, int(num_frames)) if num_frames else 2
     frames = extract_evenly_spaced_frames_pil(edited_video_path, target_num_frames, crop_left_half=False)
+    if diagnostics is not None:
+        diagnostics["dino_decoded_frames"] = len(frames)
     if not frames:
+        if raise_on_error:
+            raise ValueError("No video frames could be decoded for DINO")
         return None
     try:
         dino_model, dino_transform = _get_dino_components(model_name, device_str or "")
     except Exception as exc:
+        if raise_on_error:
+            raise
         print(f"Warning: failed to prepare DINO components for '{model_name}': {exc}")
         return None
     target_device = next(dino_model.parameters()).device
-    normalized_features: List[torch.Tensor] = []
+    normalized_features: List["torch.Tensor"] = []
     try:
         with torch.no_grad():
             for pil_img in frames:
@@ -538,11 +616,15 @@ def compute_dino_temporal_consistency(
                 feat = feat / (torch.norm(feat, dim=1, keepdim=True) + 1e-6)
                 normalized_features.append(feat)
     except Exception as exc:
+        if raise_on_error:
+            raise
         print(f"Warning: error while computing DINO features for '{edited_video_path}': {exc}")
         return None
     if len(normalized_features) < 2:
+        if raise_on_error:
+            raise ValueError("DINO needs at least two valid frame features")
         return None
-    cosine_values: List[torch.Tensor] = []
+    cosine_values: List["torch.Tensor"] = []
     for first, second in zip(normalized_features[:-1], normalized_features[1:]):
         cosine_values.append(torch.sum(first * second, dim=1))
     if not cosine_values:
@@ -556,34 +638,57 @@ def compute_dino_temporal_consistency(
 # -----------------------------------------------------------------------------
 def load_and_normalize_samples(input_json_path: str) -> List[Dict[str, Any]]:
     with open(input_json_path, "r", encoding="utf-8") as f:
-        data = json.load(f)
-    if isinstance(data, list):
-        return data
+        if input_json_path.lower().endswith(".jsonl"):
+            data = [json.loads(line) for line in f if line.strip()]
+        else:
+            data = json.load(f)
     if isinstance(data, dict):
-        if 'results' in data and isinstance(data['results'], list):
-            return data['results']
-        converted: List[Dict[str, Any]] = []
-        for sid, item in data.items():
-            if isinstance(item, dict):
-                converted.append({"id": sid, **item})
-        if converted:
-            return converted
-    raise ValueError("Unsupported JSON structure: expected list or dict with 'results' or id->sample mapping")
+        if isinstance(data.get("results"), list):
+            data = data["results"]
+        else:
+            data = [{"id": sid, **item} for sid, item in data.items() if isinstance(item, dict)]
+    if not isinstance(data, list) or not data:
+        raise ValueError("Expected a nonempty JSON/JSONL sample list, 'results', or id-to-sample mapping")
+    normalized = []
+    for index, item in enumerate(data):
+        if not isinstance(item, dict):
+            raise ValueError("Sample %d must be a JSON object" % index)
+        sample = dict(item)
+        sample_id = str(sample.get("id") or "")
+        for task in CATEGORY_ORDER:
+            prefix = task + "_"
+            if sample_id.startswith(prefix):
+                sample.setdefault("task_type", task)
+                sample.setdefault("sample_id", sample_id[len(prefix):])
+                break
+        normalized.append(sample)
+    return normalized
 
-def parse_args():
+def parse_args(argv=None):
     parser = argparse.ArgumentParser(description="Compute CLIP-T, temporal consistency, and Q-edit over edited videos (instruction as text). Paths resolved like gpt_evaluation.py")
-    parser.add_argument("--input_json", required=True, type=str, help="Path to input JSON")
+    parser.add_argument("--input_json", required=True, type=str, help="Input JSON or JSONL; accepts released benchmark id/video/edit_instruction rows")
     parser.add_argument("--video_root", required=True, type=str, help="Root containing original videos (for path construction)")
     parser.add_argument("--edited_video_root", type=str, default=None, help="Root containing edited videos (default: --video_root)")
     parser.add_argument("--edited_video_pattern", type=str, default="gen_{task_type}_{sample_id}.mp4", help="Edited filename pattern, e.g., gen_{task_type}_{sample_id}.mp4")
-    parser.add_argument("--num_frames", type=int, default=3, help="Number of frames to sample per video")
+    parser.add_argument("--num_frames", type=int, default=3, help="Frames per video (legacy CLI default: 3; historical evaluation launcher: 33)")
     parser.add_argument("--original_from_compare_left_half", action="store_true", help="Force using left half of *_compare.mp4 as original when *_input.mp4 missing")
     parser.add_argument("--output_json", type=str, default=None, help="Optional path to save per-sample metrics JSON")
     parser.add_argument("--dino_model_name", type=str, default=None, help="Optional DINOv2 model name for frame-wise consistency (e.g., dinov2_vits14)")
-    return parser.parse_args()
+    parser.add_argument("--clip_model", default="ViT-B/32", help="OpenAI CLIP model name or local checkpoint; historical: ViT-B/32")
+    parser.add_argument("--clip_download_root", default=None, help="Optional CLIP checkpoint cache")
+    parser.add_argument("--device", default=None, help="Torch device, e.g. cuda:0 or cpu (default: automatic)")
+    parser.add_argument("--dino_repo", default="facebookresearch/dinov2", help="Torch Hub repository, optionally owner/repo:revision; historical revision was not pinned")
+    parser.add_argument("--allow_partial", action="store_true", help="Return success for partial runs; failures remain listed in the JSON report")
+    return parser.parse_args(argv)
 
-def main():
-    args = parse_args()
+def main(argv=None):
+    global device, _CLIP_MODEL_NAME, _CLIP_DOWNLOAD_ROOT, _DINO_REPO, model, preprocess
+    args = parse_args(argv)
+    device, _CLIP_MODEL_NAME = args.device, args.clip_model
+    _CLIP_DOWNLOAD_ROOT, _DINO_REPO = args.clip_download_root, args.dino_repo
+    model = preprocess = None
+    _DINO_COMPONENT_CACHE.clear()
+    _DINO_PREPROCESSING.clear()
     frames_per_video = max(1, int(args.num_frames))
     dino_model_name = args.dino_model_name.strip() if args.dino_model_name and args.dino_model_name.strip() else None
     cfg = {
@@ -595,8 +700,25 @@ def main():
         "force_compare_left": bool(args.original_from_compare_left_half),
         "output_json": args.output_json,
         "dino_model_name": dino_model_name,
+        "clip_model": args.clip_model,
+        "clip_download_root": args.clip_download_root,
+        "device_requested": args.device or "auto",
+        "dino_repo": args.dino_repo,
+        "instruction_key_priority": INSTRUCTION_KEYS,
+        "clip_t_definition": "mean OpenAI CLIP image-text logits, including exp(logit_scale)",
+        "clip_text_context_length": 77,
+        "clip_text_truncate": False,
+        "clip_f_definition": "mean adjacent sampled edited-frame CLIP feature cosine",
+        "dino_definition": "mean adjacent sampled edited-frame DINO feature cosine (normalization epsilon 1e-6)",
+        "q_edit_definition": "per-video clip_t * clip_f; then arithmetic mean over valid videos",
+        "sampling": "historical: known length round(i*(T-1)/(N-1)); unknown/infinite length first N indices; append fallback decoded frames when needed",
+        "aggregation": "arithmetic mean of valid per-video scores; each metric reports its own count",
     }
     samples = load_and_normalize_samples(cfg["input_json"])
+    _load_runtime_dependencies()
+    cfg["device"] = str(device)
+    cfg["versions"] = {name: getattr(module, "__version__", "unknown") for name, module in (("torch", torch), ("numpy", np), ("imageio", imageio), ("clip", clip), ("torchvision", sys.modules.get("torchvision")), ("Pillow", sys.modules.get("PIL")))}
+    failures: List[Dict[str, Any]] = []
     clip_t_list: List[float] = []
     clip_f_list: List[float] = []
     q_list: List[float] = []
@@ -606,7 +728,12 @@ def main():
         lambda: {"clip_t": [], "clip_f": [], "q_edit": [], "dino_temporal_consistency": []}
     )
     for i, sample in enumerate(samples):
-        instruction = resolve_instruction(sample) or ""
+        instruction = resolve_instruction(sample)
+        sid = sample.get("id") or sample.get("sample_id") or "idx_%d" % i
+        if instruction is None:
+            failures.append({"id": sid, "stage": "instruction", "error": "No nonempty instruction found"})
+            print("Warning: missing instruction for %s" % sid, file=sys.stderr)
+            continue
         orig_path, edited_path, _crop_left = construct_paths_for_sample(
             sample=sample,
             original_root=cfg["original_video_root"],
@@ -617,20 +744,36 @@ def main():
         if not edited_path:
             sid = sample.get("sample_id") or sample.get("id") or f"idx_{i}"
             print(f"Warning: edited video not found for sample {sid}")
+            failures.append({"id": sid, "stage": "path", "error": "Edited video not found"})
             continue
-        clip_t, clip_f, q_edit = compute_clip_temporal_q(edited_path, instruction, cfg["frames_per_video"])
+        diagnostics: Dict[str, Any] = {}
+        total_frames = _get_video_length(edited_path)
+        diagnostics["reported_video_length"] = total_frames
+        diagnostics["primary_frame_indices"] = _compute_evenly_spaced_indices(total_frames, cfg["frames_per_video"])
+        try:
+            clip_t, clip_f, q_edit = compute_clip_temporal_q(edited_path, instruction, cfg["frames_per_video"], raise_on_error=True, diagnostics=diagnostics)
+        except Exception as exc:
+            clip_t = clip_f = q_edit = None
+            failures.append({"id": sid, "stage": "clip", "error": str(exc)})
+            print("Warning: CLIP failed for %s: %s" % (sid, exc), file=sys.stderr)
         print(f"video id, instruction, {sample.get('sample_id') or sample.get('id')}, {instruction}")
         print(f"clip_t {clip_t}")
         print(f"clip_f (CLIP-F) {clip_f}")
         print(f"q_edit {q_edit}")
         dino_score = None
         if cfg["dino_model_name"]:
-            dino_score = compute_dino_temporal_consistency(
-                edited_path,
-                cfg["frames_per_video"],
-                cfg["dino_model_name"],
-                device,
-            )
+            try:
+                dino_score = compute_dino_temporal_consistency(
+                    edited_path,
+                    cfg["frames_per_video"],
+                    cfg["dino_model_name"],
+                    device,
+                    raise_on_error=True,
+                    diagnostics=diagnostics,
+                )
+            except Exception as exc:
+                failures.append({"id": sid, "stage": "dino", "error": str(exc)})
+                print("Warning: DINO failed for %s: %s" % (sid, exc), file=sys.stderr)
             print(f"dino_temporal_consistency {dino_score}")
         print()
         if clip_t is not None and clip_f is not None and q_edit is not None:
@@ -644,6 +787,7 @@ def main():
                 "clip_t": clip_t,
                 "clip_f": clip_f,
                 "q_edit": q_edit,
+                "sampling": diagnostics,
             }
             if cfg["dino_model_name"] and dino_score is not None:
                 result_entry["dino_temporal_consistency"] = dino_score
@@ -707,7 +851,7 @@ def main():
         if metric_lists["dino_temporal_consistency"]:
             category_entry["dino_temporal_consistency_avg"] = float(np.array(metric_lists["dino_temporal_consistency"]).mean())
         averages_by_category[category] = category_entry
-    if dataset_summary:
+    if dataset_summary and "num_samples" in dataset_summary:
         overall_entry = {
             "num_scored": dataset_summary["num_samples"],
             "clip_t_avg": dataset_summary["clip_t_avg"],
@@ -761,15 +905,28 @@ def main():
                 line += f", dino_temporal_consistency_avg={stats['dino_temporal_consistency_avg']:.6f}"
             print(line)
 
+    if model is not None:
+        cfg["clip_logit_scale"] = float(model.logit_scale.exp().detach().cpu().item())
+        cfg["clip_preprocessing"] = repr(preprocess)
+    cfg["dino_preprocessing"] = _DINO_PREPROCESSING
+    coverage = {
+        "num_input_samples": len(samples),
+        "num_clip_scored": len(clip_t_list),
+        "num_dino_scored": len(dino_temp_list),
+        "num_failed_samples": len({str(failure["id"]) for failure in failures}),
+        "num_failure_events": len(failures),
+    }
+    print("Evaluation coverage: %s" % json.dumps(coverage, sort_keys=True))
     if cfg["output_json"]:
         os.makedirs(os.path.dirname(cfg["output_json"]) or ".", exist_ok=True)
-        payload: Dict[str, Any] = {"results": results}
+        payload: Dict[str, Any] = {"results": results, "configuration": cfg, "coverage": coverage, "failures": failures}
         if dataset_summary:
             payload["averages"] = dataset_summary
         if averages_by_category:
             payload["averages_by_task_type"] = averages_by_category
         with open(cfg["output_json"], "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False, indent=2)
+    return 1 if failures and not args.allow_partial else 0
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

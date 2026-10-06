@@ -19,6 +19,7 @@
   [![Hugging Face Model](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Model-yellow)](https://huggingface.co/XiangpengYang/VideoCoF)
   [![Hugging Face Demo](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Demo-blue)](https://huggingface.co/spaces/XiangpengYang/VideoCoF)
   [![Hugging Face Dataset](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-Dataset-green)](https://huggingface.co/datasets/XiangpengYang/VideoCoF-50k)
+  [![VideoCoF-Bench](https://img.shields.io/badge/%F0%9F%A4%97%20VideoCoF-Bench-orange)](https://huggingface.co/datasets/XiangpengYang/VideoCoF-Bench)
 
 </div>
 
@@ -55,8 +56,9 @@ https://github.com/user-attachments/assets/21fc04a5-c6e3-4864-abb5-070c5f44ee88
 
 ## 🔥 News
 
+- **2026.10.06**: 🎉 [VideoCoF-Bench](https://huggingface.co/datasets/XiangpengYang/VideoCoF-Bench) is available with videos and editing instructions. We also updated the [evaluation code, judge API check, and configuration guide](metric/README.md).
 - **2026.05.23**: 🎉 We released the VideoCoF training code.
-- **2026.04.09**: 🏆 VideoCoF was honored as a **CVPR 2026 Highlight**.
+- **2026.04.09**: 🏆 VideoCoF was honored as a **CVPR 2026 Highlight** (**approximately top 0.65% by review score**; [Paper Copilot statistics](https://papercopilot.com/statistics/cvpr-statistics/cvpr-2026-statistics/)).
 - **2026.02.22**: 🎉 VideoCoF was accepted to **CVPR 2026**!
 - **2026.01.02**: 📚 We released the full **VideoCoF-50k** training dataset! Check it out at [Hugging Face Datasets](https://huggingface.co/datasets/XiangpengYang/VideoCoF-50k).
 - **2025.12.13**: 🚀 We released a **4-step fast inference script** (10s per video on H100) and launched the Hugging Face demo! Please try it at [Hugging Face Spaces](https://huggingface.co/spaces/XiangpengYang/VideoCoF).
@@ -72,6 +74,7 @@ https://github.com/user-attachments/assets/21fc04a5-c6e3-4864-abb5-070c5f44ee88
 - [🗂 Repository Layout](#-repository-layout)
 - [🏋️ Training](#-training)
 - [🚀 Inference](#-inference)
+- [📊 Benchmark and Evaluation](#-benchmark-and-evaluation)
 - [🏆 Model Zoo](#-model-zoo)
 - [🍭 Results](#-results)
 - [🚧 TODO](#-todo)
@@ -87,7 +90,7 @@ https://github.com/user-attachments/assets/21fc04a5-c6e3-4864-abb5-070c5f44ee88
 1.  **Clone the repository:**
 
     ```bash
-    git clone https://github.com/videocof/VideoCoF.git
+    git clone https://github.com/knightyxp/VideoCoF.git
     cd VideoCoF
     ```
 
@@ -159,6 +162,7 @@ VideoCoF/
 │  ├─ test/                      # Legacy command snippets (main test now uses wan2.1/test_cot_lora.sh)
 │  └─ wan2.1/                   # All maintained training/inference entry scripts
 ├─ videox_fun/                  # Core models, pipeline and utils used by Wan2.1 training/inference
+├─ metric/                      # CLIP/DINO metrics, GPT-4o judges, and benchmark manifest preparation
 └─ config/                      # Deepspeed and model configs
 ```
 
@@ -248,6 +252,14 @@ python examples/app.py
 
 The demo supports fast inference (~10s per video) online.
 
+## 📊 Benchmark and Evaluation
+
+The official [VideoCoF-Bench](https://huggingface.co/datasets/XiangpengYang/VideoCoF-Bench) release contains **240 editing samples** across Object Removal, Object Addition, Object Swap, and Local Style Transfer, including instance-level editing. Videos can be previewed directly in the dataset viewer.
+
+- **Videos and editing instructions:** [dataset files](https://huggingface.co/datasets/XiangpengYang/VideoCoF-Bench/tree/main) and the combined [`videocof_edit.jsonl`](https://huggingface.co/datasets/XiangpengYang/VideoCoF-Bench/blob/main/videocof_edit.jsonl).
+- **Inference/evaluation manifest, CLIP settings, and GPT-4o judge prompts:** [evaluation guide](metric/README.md), [CLIP/DINO code](metric/compute_clip_score.py), [three-axis judge](metric/gpt_evaluation.py), and [instance success judge](metric/gpt_success_rate.py).
+- **Training data and configurations:** [VideoCoF-50k](https://huggingface.co/datasets/XiangpengYang/VideoCoF-50k) and [training guide](scripts/wan2.1/README_TRAIN_VIDEOCOF.md). See the [configuration and release notes](metric/README.md#historical-configurations-and-release-status) for historical-run coverage.
+
 ## 🏆 Model Zoo
 
 Our models are available on Hugging Face:
@@ -289,6 +301,7 @@ Current video editing methods typically follow two paths:
 - [x] Release Hugging Face demo (~10s infer a video online), try it at [Hugging Face Spaces](https://huggingface.co/spaces/XiangpengYang/VideoCoF).
 - [x] Release videocof-50k training data.
 - [x] Release training code.
+- [x] Release VideoCoF-Bench and evaluation tools.
 
 
 ## 🙏 Acknowledgments
@@ -308,11 +321,13 @@ For any questions, please feel free to reach out to the author Xiangpeng Yang [@
 If you find this work useful for your research, please consider citing:
 
 ```bibtex
-@article{yang2025videocof,
-  title={Unified Video Editing with Temporal Reasoner},
-  author={Yang, Xiangpeng and Xie, Ji and Yang, Yiyuan and Huang, Yan and Xu, Min and Wu, Qiang},
-  journal={arXiv preprint arXiv:2512.07469},
-  year={2025}
+@InProceedings{Yang_2026_CVPR,
+    author    = {Yang, Xiangpeng and Xie, Ji and Yang, Yiyuan and Ma, Yue and Huang, Yan and Xu, Min and Wu, Qiang},
+    title     = {VideoCoF: Unified Video Editing with Temporal Reasoner},
+    booktitle = {Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition (CVPR)},
+    month     = {June},
+    year      = {2026},
+    pages     = {37940-37949}
 }
 ```
 

@@ -2,6 +2,9 @@ import json
 import os
 import base64
 import argparse
+import hashlib
+import time
+import sys
 from typing import Dict, Any, List, Optional, Union, Tuple
 import io
 from PIL import Image
@@ -17,21 +20,28 @@ except Exception:
     cv2 = None
 
 
-def parse_arguments():
+def parse_arguments(argv=None):
     parser = argparse.ArgumentParser(description='Video Edit Evaluation (GPT-based scoring, streaming via relay)')
-    parser.add_argument('--input_json', required=True, type=str, help='Path to input JSON (same structure as GPT/Gemini versions)')
+    parser.add_argument('--input_json', required=True, type=str, help='Input JSON or JSONL evaluation manifest')
     parser.add_argument('--output_json', required=True, type=str, help='Path to write results JSON')
-    parser.add_argument('--video_root', required=True, type=str, help='Root directory containing ORIGINAL videos')
+    parser.add_argument('--video_root', default='.', type=str, help='Root directory containing ORIGINAL videos')
     parser.add_argument('--edited_video_root', type=str, default=None, help='Optional root directory containing EDITED videos (defaults to --video_root)')
-    parser.add_argument('--api_key', required=True, help='OpenAI-compatible API key')
-    parser.add_argument('--model', default='gpt-4o', help='OpenAI model name (e.g., gpt-4o)')
-    parser.add_argument('--api_base', default='https://api.openai.com/v1', type=str, help='OpenAI-compatible API base URL')
+    parser.add_argument('--api_key', default=os.environ.get('OPENAI_API_KEY'), help='Defaults to OPENAI_API_KEY')
+    parser.add_argument('--model', default=os.environ.get('OPENAI_MODEL', 'gpt-4o-2024-05-13'), help='Judge model (historical snapshot by default)')
+    parser.add_argument('--api_base', default=os.environ.get('OPENAI_BASE_URL', 'https://api.openai.com/v1'), type=str, help='Defaults to OPENAI_BASE_URL')
+    parser.add_argument('--request_timeout', type=float, default=120, help='HTTP connect/read timeout in seconds')
+    parser.add_argument('--max_retries', type=int, default=0, help='Retries for transient HTTP failures (historical default: 0)')
     parser.add_argument('--num_frames', type=int, default=3, help='Number of frames to sample from each video (default: 3)')
     parser.add_argument('--num_workers', type=int, default=4, help='Number of parallel threads for processing')
-    parser.add_argument('--print_stream', action='store_true', help='Print streaming content while receiving')
+    parser.add_argument('--print_stream', action='store_true', help='Print each completed judge response')
     parser.add_argument('--edited_video_pattern', type=str, default='gen_{task_type}_{sample_id}.mp4', help='Format string to derive edited video filename, e.g., "gen_{task_type}_{sample_id}.mp4"')
     parser.add_argument('--original_from_compare_left_half', action='store_true', help='Force using left half of gen_{task_type}_{sample_id}_compare.mp4 as original (fallback to input if compare missing)')
-    return parser.parse_args()
+    args = parser.parse_args(argv)
+    if not args.api_key:
+        parser.error('Set OPENAI_API_KEY or pass --api_key')
+    if args.request_timeout <= 0 or args.max_retries < 0 or args.num_workers < 1 or args.num_frames < 1:
+        parser.error('Timeout, workers and frames must be positive; retries cannot be negative')
+    return args
 
 
 def get_config(args):
@@ -43,6 +53,8 @@ def get_config(args):
         "api_key": args.api_key,
         "model": args.model,
         "api_base": args.api_base,
+        "request_timeout": args.request_timeout,
+        "max_retries": args.max_retries,
         "frames_per_video": max(1, int(args.num_frames)),
         "num_workers": args.num_workers,
         "print_stream": bool(args.print_stream),
@@ -52,8 +64,11 @@ def get_config(args):
 
 
 def load_and_normalize_samples(input_json_path: str) -> List[Dict[str, Any]]:
-    with open(input_json_path, "r", encoding="utf-8") as f:
-        samples: Union[List[Any], Dict[str, Any]] = json.load(f)
+    with open(input_json_path, "r", encoding="utf-8-sig") as f:
+        if str(input_json_path).lower().endswith('.jsonl'):
+            samples = [json.loads(line) for line in f if line.strip()]
+        else:
+            samples: Union[List[Any], Dict[str, Any]] = json.load(f)
 
     if isinstance(samples, dict):
         if 'results' in samples and isinstance(samples['results'], list):
@@ -66,6 +81,8 @@ def load_and_normalize_samples(input_json_path: str) -> List[Dict[str, Any]]:
             return converted
         raise ValueError("Unsupported JSON structure: dict without 'results' or id->sample mapping")
     elif isinstance(samples, list):
+        if not all(isinstance(sample, dict) for sample in samples):
+            raise ValueError('Every sample must be a JSON object')
         return samples
     else:
         raise ValueError("Unsupported JSON structure: expected list or dict")
@@ -436,54 +453,63 @@ def parse_evaluation_response(response_text: str) -> Dict[str, Any]:
     return {}
 
 
-def stream_chat_completion(url: str, api_key: str, payload: Dict[str, Any], print_stream: bool, timeout: Optional[int] = None) -> Tuple[str, Optional[Dict[str, Any]]]:
-    """
-    Call relay chat/completions with stream=True, accumulate content, optionally print stream.
-    Returns (full_text, usage_dict_or_none).
-    """
-    headers = {
-        "Accept": "application/json",
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json; charset=utf-8",
-    }
-    # Ensure streaming
-    payload = dict(payload)
-    payload["stream"] = True
-
-    full_text_parts: List[str] = []
-    usage: Optional[Dict[str, Any]] = None
-
-    with requests.post(url, headers=headers, json=payload, stream=True, timeout=timeout) as resp:
-        resp.raise_for_status()
-        for raw in resp.iter_lines():
-            if not raw:
+def stream_chat_completion(url: str, api_key: str, payload: Dict[str, Any], print_stream: bool, timeout: Optional[float] = 120, max_retries: int = 0) -> Tuple[str, Optional[Dict[str, Any]], Optional[str]]:
+    """Read one complete SSE response, with bounded retries and redacted errors."""
+    headers = {"Accept": "application/json", "Authorization": f"Bearer {api_key}",
+               "Content-Type": "application/json; charset=utf-8"}
+    payload = dict(payload, stream=True)
+    for attempt in range(max_retries + 1):
+        parts, usage, returned_model = [], None, None
+        completed = False
+        try:
+            with requests.post(url, headers=headers, json=payload, stream=True, timeout=timeout) as resp:
+                resp.raise_for_status()
+                for raw in resp.iter_lines():
+                    if not raw:
+                        continue
+                    line = raw.decode('utf-8', errors='replace').strip()
+                    if not line.startswith('data:'):
+                        continue
+                    line = line[5:].strip()
+                    if line == '[DONE]':
+                        completed = True
+                        break
+                    try:
+                        chunk = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    if not isinstance(chunk, dict):
+                        continue
+                    if chunk.get('error'):
+                        raise RuntimeError('Judge API returned a streaming error')
+                    if isinstance(chunk.get('model'), str):
+                        returned_model = chunk['model']
+                    choices = chunk.get('choices')
+                    if isinstance(choices, list) and choices:
+                        choice = choices[0]
+                        finish_reason = choice.get('finish_reason')
+                        if finish_reason not in (None, 'stop'):
+                            raise RuntimeError('Judge response did not finish normally')
+                        completed = completed or finish_reason == 'stop'
+                        content = (choice.get('delta') or {}).get('content')
+                        if isinstance(content, str):
+                            parts.append(content)
+                    if isinstance(chunk.get('usage'), dict):
+                        usage = chunk['usage']
+            if not completed:
+                raise RuntimeError('Judge stream ended before a completion marker')
+            text = ''.join(parts)
+            if print_stream:
+                print(text, flush=True)
+            return text, usage, returned_model
+        except requests.RequestException as exc:
+            status = getattr(getattr(exc, 'response', None), 'status_code', None)
+            transient = isinstance(exc, (requests.Timeout, requests.ConnectionError)) or status == 429 or (isinstance(status, int) and status >= 500)
+            if transient and attempt < max_retries:
+                time.sleep(min(2 ** attempt, 8))
                 continue
-            line = raw.decode('utf-8', errors='replace').strip()
-            if not line:
-                continue
-            if line.startswith('data: '):
-                line = line[6:]
-            if line == '[DONE]':
-                break
-            try:
-                chunk = json.loads(line)
-            except json.JSONDecodeError:
-                continue
-            # Standard OpenAI-like stream chunk
-            choices = chunk.get("choices")
-            if isinstance(choices, list) and choices:
-                delta = choices[0].get("delta", {}) or {}
-                content = delta.get("content")
-                if isinstance(content, str) and content:
-                    full_text_parts.append(content)
-                    if print_stream:
-                        print(content, end='', flush=True)
-            # Some relays may append usage in the final event
-            if "usage" in chunk and isinstance(chunk["usage"], dict):
-                usage = chunk["usage"]
-    if print_stream:
-        print()
-    return ("".join(full_text_parts), usage)
+            raise RuntimeError('Judge API request failed' + (f' (HTTP {status})' if status else '')
+                               + '; check credentials, model availability and connectivity') from None
 
 
 def evaluate_sample(
@@ -522,11 +548,13 @@ def evaluate_sample(
             "messages": messages,
             "temperature": 0.1,
         }
-        response_text, usage = stream_chat_completion(
+        response_text, usage, returned_model = stream_chat_completion(
             url=url,
             api_key=cfg["api_key"],
             payload=payload,
             print_stream=bool(cfg.get("print_stream", False)),
+            timeout=cfg.get("request_timeout", 120),
+            max_retries=cfg.get("max_retries", 0),
         )
 
         if not response_text or not response_text.strip():
@@ -536,6 +564,10 @@ def evaluate_sample(
         evaluation = parse_evaluation_response(response_text)
         if not evaluation:
             print(f"[ERROR] Failed to parse JSON response for sample_id={sample_id}")
+            return None
+
+        if not compute_average_scores([{"evaluation": evaluation}])["num_scored"]:
+            print(f"[ERROR] Missing or invalid 1-10 scores for sample_id={sample_id}")
             return None
 
         result: Dict[str, Any] = {
@@ -552,6 +584,13 @@ def evaluate_sample(
             "evaluation": evaluation,
             "raw_response": response_text.strip(),
             "model": cfg["model"],
+            "judge_metadata": {
+                "requested_model": cfg["model"], "returned_model": returned_model,
+                "temperature": 0.1, "stream": True,
+                "request_timeout": cfg.get("request_timeout", 120),
+                "max_retries": cfg.get("max_retries", 0),
+                "rubric_sha256": hashlib.sha256(EVALUATION_PROMPT_TEXT.encode()).hexdigest(),
+            },
         }
 
         if len(original_frames) < frames_per_video or len(edited_frames) < frames_per_video:
@@ -568,7 +607,7 @@ def evaluate_sample(
 
         return result
     except requests.exceptions.RequestException as e:
-        print(f"[ERROR] HTTP error while evaluating sample_id={sample_id}: {e}")
+        print(f"[ERROR] HTTP error while evaluating sample_id={sample_id}: {type(e).__name__}")
         return None
     except Exception as e:
         print(f"[ERROR] Failed to evaluate sample_id={sample_id}: {e}")
@@ -615,7 +654,7 @@ def load_existing_results_list(output_path: str) -> List[Dict[str, Any]]:
         return data
     if isinstance(data, dict) and isinstance(data.get('results'), list):
         return data['results']
-    return []
+    raise ValueError('Existing output must be a result list or an object containing results')
 
 
 def save_results(results: List[Dict[str, Any]], output_path: str):
@@ -625,6 +664,8 @@ def save_results(results: List[Dict[str, Any]], output_path: str):
 
 
 def _to_number(value: Any) -> Optional[float]:
+    if isinstance(value, bool):
+        return None
     if isinstance(value, (int, float)):
         return float(value)
     if isinstance(value, str):
@@ -678,7 +719,7 @@ def compute_average_scores(results: List[Dict[str, Any]]) -> Dict[str, Any]:
         v_instruct = _to_number(_get_by_aliases(eval_obj, instruct_aliases))
         v_quality = _to_number(_get_by_aliases(eval_obj, quality_aliases))
         v_preservation = _to_number(_get_by_aliases(eval_obj, preservation_aliases))
-        if v_instruct is None or v_quality is None or v_preservation is None:
+        if any(value is None or not 1 <= value <= 10 for value in (v_instruct, v_quality, v_preservation)):
             continue
         total_instruct += v_instruct
         total_quality += v_quality
@@ -743,7 +784,7 @@ def compute_average_scores_by_task_type(results: List[Dict[str, Any]]) -> Dict[s
         v_instruct = _to_number(_get_by_aliases(eval_obj, instruct_aliases))
         v_quality = _to_number(_get_by_aliases(eval_obj, quality_aliases))
         v_preservation = _to_number(_get_by_aliases(eval_obj, preservation_aliases))
-        if v_instruct is None or v_quality is None or v_preservation is None:
+        if any(value is None or not 1 <= value <= 10 for value in (v_instruct, v_quality, v_preservation)):
             continue
         if category not in sums:
             sums[category] = {"instruct": 0.0, "quality": 0.0, "preservation": 0.0}
@@ -767,13 +808,15 @@ def compute_average_scores_by_task_type(results: List[Dict[str, Any]]) -> Dict[s
     return summary
 
 
-def save_results_with_summary(results: List[Dict[str, Any]], output_path: str, averages: Dict[str, Any], averages_by_task_type: Dict[str, Any]):
+def save_results_with_summary(results: List[Dict[str, Any]], output_path: str, averages: Dict[str, Any], averages_by_task_type: Dict[str, Any], total_samples: Optional[int] = None):
     os.makedirs(os.path.dirname(output_path) or '.', exist_ok=True)
     payload = {
         "results": results,
         "averages": averages,
         "averages_by_task_type": averages_by_task_type,
     }
+    payload['coverage'] = {'num_input_samples': total_samples, 'num_evaluated': len(results),
+                           'num_missing_or_failed': total_samples - len(results) if total_samples is not None else None}
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
 
@@ -787,15 +830,15 @@ def resolve_video_path(video_root: Optional[str], rel_path: str) -> Optional[str
         return None
 
     rp = os.path.expanduser(rp)
-    if os.path.isabs(rp) and os.path.exists(rp):
-        return rp
+    if os.path.isabs(rp):
+        return rp if os.path.isfile(rp) else None
 
     if video_root:
-        candidate = os.path.join(video_root, rp.lstrip("./"))
-        if os.path.exists(candidate):
+        candidate = os.path.join(video_root, rp)
+        if os.path.isfile(candidate):
             return candidate
 
-    if os.path.exists(rp):
+    if os.path.isfile(rp):
         return os.path.abspath(rp)
 
     return None
@@ -869,173 +912,120 @@ def resolve_instruction(sample: Dict[str, Any]) -> Optional[str]:
     return None
 
 
+def resolve_sample_paths(sample: Dict[str, Any], cfg: Dict[str, Any]) -> Tuple[Optional[str], Optional[str], bool]:
+    """Explicit manifest paths are authoritative; legacy names remain a fallback."""
+    def first(keys):
+        return next((sample[key] for key in keys if isinstance(sample.get(key), str) and sample[key].strip()), None)
+    original_ref, edited_ref = first(ORIGINAL_VIDEO_KEYS), first(EDITED_VIDEO_KEYS)
+    original = resolve_video_path(cfg['original_video_root'], original_ref) if original_ref else None
+    edited = resolve_video_path(cfg['edited_video_root'], edited_ref) if edited_ref else None
+    crop = bool(sample.get('original_from_compare_left_half', False)) if original_ref else False
+    if (original_ref and not original) or (edited_ref and not edited):
+        return None, None, False
+    if original and edited:
+        return original, edited, crop
+    values = _build_pattern_values(sample)
+    task, sid = values['task_type'], values['sample_id']
+    if not task or not sid:
+        return None, None, False
+    variants = _expand_task_type_variants(task)
+    if not original:
+        suffixes = [('_compare.mp4', True), ('_input.mp4', False)] if cfg.get('original_from_compare_left_half') else [('_input.mp4', False), ('_compare.mp4', True)]
+        for suffix, needs_crop in suffixes:
+            original = resolve_first_existing(cfg['original_video_root'], [f'gen_{task_variant}_{sid}{suffix}' for task_variant in variants])
+            if original:
+                crop = needs_crop
+                break
+    if not edited:
+        candidates = []
+        for task_variant in variants:
+            pattern_values = dict(values, task_type=task_variant, task_type_lower=task_variant.lower(),
+                                  task_type_clean=''.join(c if c.isalnum() or c in '-_' else '_' for c in task_variant))
+            pattern = cfg.get('edited_video_pattern') or 'gen_{task_type}_{sample_id}.mp4'
+            try:
+                candidates.append(pattern.format(**pattern_values))
+            except KeyError:
+                pass
+            candidates.extend([f'gen_{task_variant}_{sid}_gen.mp4', f'gen_{task_variant}_{sid}.mp4'])
+        edited = resolve_first_existing(cfg['edited_video_root'], candidates)
+    return original, edited, crop
+
+
+def evaluation_key(sample: Dict[str, Any], cfg: Dict[str, Any], media_hashes: Optional[Dict[str, str]] = None) -> str:
+    original, edited, crop = resolve_sample_paths(sample, cfg)
+    # The caller may reuse hashes only for the duration of one evaluation run.
+    # A fresh call without a cache always inspects the current file contents.
+    hashes = media_hashes if media_hashes is not None else {}
+    def video_digest(path):
+        if path is None:
+            return None
+        path = os.path.abspath(path)
+        if path not in hashes:
+            digest = hashlib.sha256()
+            with open(path, 'rb') as stream:
+                for block in iter(lambda: stream.read(1024 * 1024), b''):
+                    digest.update(block)
+            hashes[path] = digest.hexdigest()
+        return hashes[path]
+    identity = {'task_type': sample.get('task_type'),
+                'sample_id': str(sample.get('sample_id') or sample.get('id') or sample.get('video_id') or ''),
+                'instruction': resolve_instruction(sample),
+                'original_video_path': os.path.abspath(original) if original else None,
+                'edited_video_path': os.path.abspath(edited) if edited else None,
+                'original_video_sha256': video_digest(original),
+                'edited_video_sha256': video_digest(edited),
+                'api_base_sha256': hashlib.sha256(cfg['api_base'].rstrip('/').encode()).hexdigest(),
+                'crop_left_half': crop, 'model': cfg['model'],
+                'frames_per_video': cfg.get('frames_per_video', 1),
+                'rubric_sha256': hashlib.sha256(EVALUATION_PROMPT_TEXT.encode()).hexdigest()}
+    return hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
+
+
 def main():
     args = parse_arguments()
     cfg = get_config(args)
+    samples = load_and_normalize_samples(cfg['input_json'])
+    media_hashes = {}
+    keys = [evaluation_key(sample, cfg, media_hashes) for sample in samples]
+    if len(set(keys)) != len(keys):
+        raise ValueError('Manifest contains duplicate evaluation cases')
+    output_path = cfg['output_json']
+    existing = load_existing_results_list(output_path)
+    by_key = {}
+    for row in existing:
+        key = row.get('evaluation_key') if isinstance(row, dict) else None
+        if not key:
+            raise ValueError('Cannot safely resume legacy output without evaluation_key; select a new --output_json')
+        if key not in keys:
+            raise ValueError('Existing output does not match this manifest/judge configuration; select a new --output_json')
+        by_key[key] = row
+    pending = [i for i, key in enumerate(keys) if key not in by_key]
+    print(f'Loaded {len(samples)} samples; resuming {len(by_key)} completed cases; evaluating {len(pending)}')
 
-    samples = load_and_normalize_samples(cfg["input_json"])
-    print(f"Loaded {len(samples)} samples")
-
-    output_path = cfg["output_json"]
-    results: List[Dict[str, Any]] = []
-    start_idx = 0
-    if os.path.exists(output_path):
-        try:
-            existing = load_existing_results_list(output_path)
-            if isinstance(existing, list) and existing:
-                results = existing
-                start_idx = len(results)
-                print(f"Resuming from sample index {start_idx}")
-        except Exception as e:
-            print(f"Error reading existing output file: {e}")
-
-    print(f"Using {cfg['num_workers']} worker threads")
-
-    def _first_non_empty(sample_obj: Dict[str, Any], keys: List[str]) -> Optional[str]:
-        for k in keys:
-            val = sample_obj.get(k)
-            if isinstance(val, str) and val.strip():
-                return val
-        return None
-
-    def _worker(i: int, sample: Dict[str, Any]):
-        sample_identifier = sample.get("sample_id") or sample.get("id") or f"idx_{i}"
-
+    def _worker(i):
+        sample = samples[i]
         instruction = resolve_instruction(sample)
-        if not instruction:
-            print(f"Warning: Instruction missing for sample index {i} ({sample_identifier})")
-            return (i, None, True)
+        original, edited, crop = resolve_sample_paths(sample, cfg)
+        if not instruction or not original or not edited:
+            print(f'[ERROR] Sample index {i}: instruction or video pair is missing')
+            return None
+        result = evaluate_sample(original, edited, instruction, sample, cfg, original_crop_left_half=crop)
+        return dict(sample, **result, evaluation_key=keys[i]) if result else None
 
-        # Construct paths purely from task_type and sample_id; never read paths from JSON
-        values = _build_pattern_values(sample)
-        task_type = values.get("task_type") or values.get("task_type_lower") or ""
-        sample_id_val = values.get("sample_id") or values.get("id") or ""
-        if not (task_type and sample_id_val):
-            print(f"Warning: Missing task_type or sample_id for sample index {i} ({sample_identifier})")
-            return (i, None, True)
-        task_variants = _expand_task_type_variants(task_type)
-        base_names: List[str] = [f"gen_{tv}_{sample_id_val}" for tv in task_variants]
-
-        # Original: prefer input, fallback to compare (left half)
-        force_compare = bool(cfg.get("original_from_compare_left_half", False))
-        original_crop_left = False
-        original_path = None
-        tried_originals: List[str] = []
-        if force_compare:
-            # Try compare across all variants, then input across all variants
-            for bn in base_names:
-                rel = f"{bn}_compare.mp4"
-                tried_originals.append(rel)
-                candidate = resolve_video_path(cfg["original_video_root"], rel)
-                if candidate:
-                    original_path = candidate
-                    original_crop_left = True
-                    break
-            if not original_path:
-                for bn in base_names:
-                    rel = f"{bn}_input.mp4"
-                    tried_originals.append(rel)
-                    candidate = resolve_video_path(cfg["original_video_root"], rel)
-                    if candidate:
-                        original_path = candidate
-                        original_crop_left = False
-                        break
-        else:
-            # Try input across all variants, then compare across all variants
-            for bn in base_names:
-                rel = f"{bn}_input.mp4"
-                tried_originals.append(rel)
-                candidate = resolve_video_path(cfg["original_video_root"], rel)
-                if candidate:
-                    original_path = candidate
-                    original_crop_left = False
-                    break
-            if not original_path:
-                for bn in base_names:
-                    rel = f"{bn}_compare.mp4"
-                    tried_originals.append(rel)
-                    candidate = resolve_video_path(cfg["original_video_root"], rel)
-                    if candidate:
-                        original_path = candidate
-                        original_crop_left = True
-                        break
-        if not original_path:
-            tried_list = ", ".join(tried_originals)
-            print(
-                f"Warning: Original video not found for sample index {i} ({sample_identifier}) | "
-                f"tried [{tried_list}] under root='{cfg['original_video_root']}'"
-            )
-            return (i, None, True)
-
-        # Edited path strictly from pattern/default under edited root
-        edited_pattern = cfg.get("edited_video_pattern")
-        edited_candidates: List[str] = []
-        # Pattern-based candidates for each task variant
-        for tv in task_variants:
-            vals = dict(values)
-            vals["task_type"] = tv
-            vals["task_type_lower"] = tv.lower()
-            vals["task_type_clean"] = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "_" for ch in tv)
+    with ThreadPoolExecutor(max_workers=cfg['num_workers']) as executor:
+        future_to_idx = {executor.submit(_worker, i): i for i in pending}
+        for future in tqdm(as_completed(future_to_idx), total=len(pending), desc='Evaluating', unit='sample'):
+            i = future_to_idx[future]
             try:
-                rel = edited_pattern.format(**vals) if edited_pattern else f"gen_{tv}_{sample_id_val}.mp4"
-            except KeyError:
-                rel = f"gen_{tv}_{sample_id_val}.mp4"
-            if rel not in edited_candidates:
-                edited_candidates.append(rel)
-            # Also try _gen variant
-            base_rel = f"gen_{tv}_{sample_id_val}.mp4"
-            gen_rel = f"gen_{tv}_{sample_id_val}_gen.mp4"
-            for alt in (gen_rel, base_rel):
-                if alt not in edited_candidates:
-                    edited_candidates.append(alt)
-        edited_path = resolve_first_existing(cfg["edited_video_root"], edited_candidates)
-        if not edited_path:
-            tried_list = ", ".join(edited_candidates)
-            print(
-                f"Warning: Edited video not found for sample index {i} ({sample_identifier}) | "
-                f"tried [{tried_list}] under root='{cfg['edited_video_root']}'"
-            )
-            return (i, None, True)
-
-        result = evaluate_sample(original_path, edited_path, instruction, sample, cfg, original_crop_left_half=original_crop_left)
-        if result:
-            merged = {**sample, **result}
-            return (i, merged, False)
-        return (i, None, True)
-
-    next_save_idx = start_idx
-    done: Dict[int, Any] = {}
-
-    with ThreadPoolExecutor(max_workers=cfg["num_workers"]) as executor:
-        future_to_idx = {
-            executor.submit(_worker, i, samples[i]): i
-            for i in range(start_idx, len(samples))
-        }
-
-        total_to_process = len(samples) - start_idx
-        with tqdm(total=total_to_process, desc="Evaluating", unit="sample", dynamic_ncols=True) as pbar:
-            for future in as_completed(future_to_idx):
-                try:
-                    i, merged, skip_flag = future.result()
-                except Exception as e:
-                    i = future_to_idx[future]
-                    print(f"[ERROR] Worker failed for index {i}: {e}")
-                    merged, skip_flag = None, True
-                done[i] = (merged, skip_flag)
-
-                while next_save_idx in done:
-                    merged_res, is_skip = done.pop(next_save_idx)
-                    if not is_skip and merged_res is not None:
-                        results.append(merged_res)
-                        try:
-                            save_results(results, output_path)
-                        except Exception as e:
-                            print(f"[ERROR] Failed to save intermediate results: {e}")
-                    next_save_idx += 1
-
-                pbar.update(1)
-
-    save_results(results, output_path)
+                row = future.result()
+            except Exception as exc:
+                print(f'[ERROR] Sample index {i}: {type(exc).__name__}')
+                row = None
+            if row is not None:
+                by_key[keys[i]] = row
+                save_results([by_key[key] for key in keys if key in by_key], output_path)
+    results = [by_key[key] for key in keys if key in by_key]
+    print(f'Coverage: {len(results)}/{len(samples)} evaluated; {len(samples) - len(results)} missing/failed (excluded from scores)')
     # Compute and print averages; then write final JSON with summary
     averages = compute_average_scores(results)
     averages_by_task_type = compute_average_scores_by_task_type(results)
@@ -1063,9 +1053,10 @@ def main():
             f"quality_avg={s['quality_avg']:.3f}, "
             f"preservation_avg={s['preservation_avg']:.3f}"
         )
-    save_results_with_summary(results, output_path, averages, averages_by_task_type)
+    save_results_with_summary(results, output_path, averages, averages_by_task_type, total_samples=len(samples))
     print(f"\nProcessing complete! Total samples evaluated: {len(results)}")
+    return 0 if len(results) == len(samples) else 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
