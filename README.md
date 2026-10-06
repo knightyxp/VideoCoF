@@ -56,9 +56,9 @@ https://github.com/user-attachments/assets/21fc04a5-c6e3-4864-abb5-070c5f44ee88
 
 ## 🔥 News
 
-- **2026.10.06**: 🎉 [VideoCoF-Bench](https://huggingface.co/datasets/XiangpengYang/VideoCoF-Bench) is available with videos and editing instructions. We also updated the [evaluation code, judge API check, and configuration guide](metric/README.md).
+- **2026.10.06**: 🎉 We updated the [metric code](metric/README.md): GPT-4o as judge and automatic metrics (CLIP/DINO).
 - **2026.05.23**: 🎉 We released the VideoCoF training code.
-- **2026.04.09**: 🏆 VideoCoF was honored as a **CVPR 2026 Highlight** (**approximately top 0.65% by review score**; [Paper Copilot statistics](https://papercopilot.com/statistics/cvpr-statistics/cvpr-2026-statistics/)).
+- **2026.04.09**: 🏆 VideoCoF was honored as a **CVPR 2026 Highlight** ([**top 0.65%**](https://papercopilot.com/statistics/cvpr-statistics/cvpr-2026-statistics/)).
 - **2026.02.22**: 🎉 VideoCoF was accepted to **CVPR 2026**!
 - **2026.01.02**: 📚 We released the full **VideoCoF-50k** training dataset! Check it out at [Hugging Face Datasets](https://huggingface.co/datasets/XiangpengYang/VideoCoF-50k).
 - **2025.12.13**: 🚀 We released a **4-step fast inference script** (10s per video on H100) and launched the Hugging Face demo! Please try it at [Hugging Face Spaces](https://huggingface.co/spaces/XiangpengYang/VideoCoF).
