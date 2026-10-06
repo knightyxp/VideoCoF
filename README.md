@@ -56,7 +56,7 @@ https://github.com/user-attachments/assets/21fc04a5-c6e3-4864-abb5-070c5f44ee88
 
 ## 🔥 News
 
-- **2026.10.06**: 🎉 We updated the [metric code](metric/README.md): GPT-4o as judge and automatic metrics (CLIP/DINO).
+- **2026.10.06**: 🎉 We released [VideoCoF-Bench](https://huggingface.co/datasets/XiangpengYang/VideoCoF-Bench) and the corresponding [evaluation code](metric/README.md) (GPT-4o as judge and CLIP/DINO metrics).
 - **2026.05.23**: 🎉 We released the VideoCoF training code.
 - **2026.04.09**: 🏆 VideoCoF was honored as a **CVPR 2026 Highlight** ([**top 0.65%**](https://papercopilot.com/statistics/cvpr-statistics/cvpr-2026-statistics/)).
 - **2026.02.22**: 🎉 VideoCoF was accepted to **CVPR 2026**!
